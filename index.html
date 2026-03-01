@@ -595,7 +595,7 @@
                     </div>
                     <div>
                         ${syncBtn}
-                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editAccount(${acc.id})">평가액 수정</button>
+                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editAccount(${acc.id})">${acc.type === 'stock' ? '평가액 수정' : '금액 수정'}</button>
                         <button class="btn btn-sm btn-outline-danger" onclick="deleteAccount(${acc.id})">삭제</button>
                     </div>
                 </li>
@@ -638,21 +638,30 @@
     function editAccount(id) {
         const acc = accounts.find(a => a.id === id);
         if (acc) {
-            // 1. 수량 입력
-            const qtyInput = prompt(`'${acc.name}'의 보유 수량을 입력하세요:`, acc.quantity || 0);
-            if (qtyInput === null) return;
-            const newQty = parseFloat(qtyInput);
+            let newQty = acc.quantity || 0;
+            let newAvg = acc.avgPrice || 0;
+            let newBalance = acc.balance;
 
-            // 2. 평단가 입력
-            const avgInput = prompt(`'${acc.name}'의 평균 매입 단가(평단)를 입력하세요:`, acc.avgPrice || 0);
-            if (avgInput === null) return;
-            const newAvg = parseInt(avgInput);
+            if (acc.type === 'stock') {
+                // 주식: 수량 -> 평단가 -> 평가액 순서로 입력
+                const qtyInput = prompt(`'${acc.name}'의 보유 수량을 입력하세요:`, acc.quantity || 0);
+                if (qtyInput === null) return;
+                newQty = parseFloat(qtyInput);
 
-            // 3. 현재 평가액 입력 (기본값: 수량 * 평단가 추천)
-            const defaultBalance = parseInt(newQty * newAvg) || acc.balance;
-            const balanceInput = prompt(`'${acc.name}'의 현재 총 평가 금액(시세)을 입력하세요:`, defaultBalance);
-            if (balanceInput === null) return;
-            const newBalance = parseInt(balanceInput);
+                const avgInput = prompt(`'${acc.name}'의 평균 매입 단가(평단)를 입력하세요:`, acc.avgPrice || 0);
+                if (avgInput === null) return;
+                newAvg = parseInt(avgInput);
+
+                const defaultBalance = parseInt(newQty * newAvg) || acc.balance;
+                const balanceInput = prompt(`'${acc.name}'의 현재 총 평가 금액(시세)을 입력하세요:`, defaultBalance);
+                if (balanceInput === null) return;
+                newBalance = parseInt(balanceInput);
+            } else {
+                // 예적금: 단순히 잔액만 입력
+                const balanceInput = prompt(`'${acc.name}'의 현재 잔액(금액)을 입력하세요:`, acc.balance);
+                if (balanceInput === null) return;
+                newBalance = parseInt(balanceInput);
+            }
 
             if (!isNaN(newQty) && !isNaN(newAvg) && !isNaN(newBalance)) {
                 const diff = newBalance - acc.balance;
@@ -672,7 +681,7 @@
                         type: diff > 0 ? 'income' : 'expense',
                         category: '투자손익',
                         amount: Math.abs(diff),
-                        desc: `[평가조정] ${acc.name}`,
+                        desc: `[${acc.type === 'stock' ? '평가조정' : '잔액수정'}] ${acc.name}`,
                         assetType: acc.type,
                         accountId: acc.id
                     });
@@ -1081,9 +1090,13 @@
             accountId: accountId // 연동된 계좌 ID
         };
 
-        // 지출이면서 자산 연동 시 -> 해당 계좌 잔액 증가
-        if (type === 'expense') {
-            if (accountId) updateAccountBalance(accountId, amount);
+        // 자산 연동 시 잔액 업데이트 (수입: 증가, 지출: 감소)
+        if (accountId) {
+            if (type === 'income') {
+                updateAccountBalance(accountId, amount);
+            } else if (type === 'expense') {
+                updateAccountBalance(accountId, -amount);
+            }
         }
 
         transactions.push(newTransaction);
