@@ -672,8 +672,8 @@
                 
                 localStorage.setItem('couple_accounts', JSON.stringify(accounts));
 
-                // 평가액 차액 기록
-                if (diff !== 0) {
+                // 평가액 차액 기록 (수정: 주식일 때만 투자손익 내역 남김, 예적금은 잔액만 조용히 변경)
+                if (diff !== 0 && acc.type === 'stock') {
                     const today = new Date().toISOString().split('T')[0];
                     transactions.push({
                         id: Date.now(),
@@ -681,7 +681,7 @@
                         type: diff > 0 ? 'income' : 'expense',
                         category: '투자손익',
                         amount: Math.abs(diff),
-                        desc: `[${acc.type === 'stock' ? '평가조정' : '잔액수정'}] ${acc.name}`,
+                        desc: `[평가조정] ${acc.name}`,
                         assetType: acc.type,
                         accountId: acc.id
                     });
@@ -1206,9 +1206,9 @@
     // 요약 정보 업데이트
     function updateSummary(currentData) {
         // 전체 자산 계산 (전체 데이터 기준)
-        // 수정: '투자손익'은 현금 흐름이 아닌 자산 가치 변동이므로 현금 계산에서 제외 (중복 합산 방지)
-        const allIncome = transactions.filter(t => t.type === 'income' && t.category !== '투자손익').reduce((acc, cur) => acc + (parseInt(cur.amount) || 0), 0);
-        const allExpense = transactions.filter(t => t.type === 'expense' && t.category !== '투자손익').reduce((acc, cur) => acc + (parseInt(cur.amount) || 0), 0);
+        // 수정: 계좌와 연동된 내역(accountId가 있는 경우)은 해당 계좌 잔액에 이미 반영되어 있으므로, 현금 계산에서는 제외 (중복 합산 방지)
+        const allIncome = transactions.filter(t => t.type === 'income' && !t.accountId).reduce((acc, cur) => acc + (parseInt(cur.amount) || 0), 0);
+        const allExpense = transactions.filter(t => t.type === 'expense' && !t.accountId).reduce((acc, cur) => acc + (parseInt(cur.amount) || 0), 0);
         const currentCash = allIncome - allExpense;
         
         // 계좌 총액 계산 (수정: 평단가가 아닌 현재 평가금(balance) 기준으로 합산하여 실시간 가치 반영)
