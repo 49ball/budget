@@ -509,11 +509,21 @@
         
         // 상세 구분 선택 박스 표시 여부 (주식/투자 탭일 때만 예수금/자산 구분)
         const detailSelect = document.getElementById('newAccountDetailType');
+        const nameInput = document.getElementById('newAccountName');
+        const balanceInput = document.getElementById('newAccountBalance');
+        const tickerInput = document.getElementById('newAccountTicker');
         const avgInput = document.getElementById('newAccountAvgPrice');
         const qtyInput = document.getElementById('newAccountQuantity');
 
         if (type === 'stock') {
+            // 주식 모드 UI 설정
+            detailSelect.parentElement.style.display = 'block';
             detailSelect.style.display = 'block';
+            nameInput.parentElement.className = 'col-8';
+            balanceInput.parentElement.className = 'col-6';
+            balanceInput.placeholder = '현재 총 평가금(잔액)';
+            tickerInput.parentElement.style.display = 'block';
+
             // 수정: 창을 열 때 현재 선택된 타입(투자형)에 맞춰 입력 필드 표시 상태 동기화
             if (detailSelect.value === 'asset') {
                 avgInput.style.display = 'block';
@@ -523,7 +533,13 @@
                 qtyInput.style.display = 'none';
             }
         } else {
+            // 예적금 모드 UI 설정 (심플하게)
+            detailSelect.parentElement.style.display = 'none';
             detailSelect.style.display = 'none';
+            nameInput.parentElement.className = 'col-12';
+            balanceInput.parentElement.className = 'col-12';
+            balanceInput.placeholder = '현재 자산(잔액)';
+            tickerInput.parentElement.style.display = 'none';
             avgInput.style.display = 'none';
             qtyInput.style.display = 'none';
         }
