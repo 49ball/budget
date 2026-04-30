@@ -114,6 +114,12 @@
 </nav>
 
 <div class="container">
+    <!-- 0. 커플 목표 -->
+    <div class="alert alert-info d-flex justify-content-between align-items-center mb-4 shadow-sm" style="border-radius: 15px; background-color: #eef2ff; border-color: #c7d2fe;">
+        <div id="coupleGoalDisplay" class="fw-bold fs-5 text-primary" style="letter-spacing: -0.5px;">🎯 우리의 목표: </div>
+        <button class="btn btn-sm btn-primary text-white" onclick="editGoal()">목표 설정</button>
+    </div>
+
     <!-- 1. 자산 및 주식 현황 -->
     <div class="row mb-4">
         <div class="col-md-4">
@@ -121,7 +127,12 @@
                 <div class="card-body">
                     <h5 class="card-title">💰 현재 총 자산</h5>
                     <h2 id="totalAsset">0원</h2>
-                    <p class="mb-0">현금 + 주식 평가액</p>
+                    <p class="mb-0">현금 + 주식 + 예적금</p>
+                    <hr class="border-light opacity-50 my-2">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <input type="month" id="saveAssetMonth" class="form-control form-control-sm text-center" style="max-width: 120px; font-size: 0.85rem;">
+                        <button class="btn btn-sm btn-light text-primary fw-bold ms-2" style="font-size: 0.85rem;" onclick="saveCurrentTotalAsset()">이 달의 자산으로 기록</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -418,7 +429,7 @@
             </div>
             <div class="modal-body">
                 <canvas id="assetTrendChart"></canvas>
-                <p class="text-center text-muted small mt-2">* 순수입(수입-소비) 누적액과 현재 자산 가치를 기반으로 추산된 그래프입니다.</p>
+                <p class="text-center text-muted small mt-2">* 꺾은선: 직접 기록한 월별 총 자산 / 막대: 달마다의 단순 수입·지출 비교</p>
             </div>
         </div>
     </div>
@@ -434,6 +445,8 @@
     let categories = JSON.parse(localStorage.getItem('couple_categories')) || ['식비', '교통', '쇼핑', '주거/통신', '투자', '월급', '기타', '투자손익'];
     let monthlyBudgets = JSON.parse(localStorage.getItem('couple_monthly_budgets')) || {};
     let fixedExpenses = JSON.parse(localStorage.getItem('couple_fixed_expenses')) || [];
+    let monthlyGoals = JSON.parse(localStorage.getItem('couple_monthly_goals')) || {};
+    let monthlyAssetsData = JSON.parse(localStorage.getItem('couple_monthly_assets')) || {};
     let currentDate = new Date(); // 현재 보고 있는 달
     let selectedDate = null; // 선택된 날짜 저장
     let editingId = null; // 현재 수정 중인 내역 ID
@@ -454,6 +467,10 @@
         }
 
         document.getElementById('date').valueAsDate = new Date(); // 입력 폼은 오늘 날짜로
+        
+        const today = new Date();
+        document.getElementById('saveAssetMonth').value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+        
         updateTitleUI();
         renderCategoryOptions();
         renderAll();
@@ -469,6 +486,53 @@
             appTitle = newTitle;
             localStorage.setItem('budget_title', newTitle);
             updateTitleUI();
+        }
+    }
+
+    function updateGoalUI() {
+        const key = getMonthKey(currentDate);
+        const currentGoal = monthlyGoals[key] || '이번 달 목표를 설정해보세요! ✨';
+        document.getElementById('coupleGoalDisplay').innerText = `🎯 ${currentDate.getMonth() + 1}월 목표: ${currentGoal}`;
+    }
+
+    function editGoal() {
+        const key = getMonthKey(currentDate);
+        const currentGoal = monthlyGoals[key] || '';
+        const newGoal = prompt(`${currentDate.getMonth() + 1}월의 목표를 입력해주세요 (예: 외식비 줄이고 30만원 저축하기):`, currentGoal);
+        if (newGoal !== null) {
+            monthlyGoals[key] = newGoal;
+            localStorage.setItem('couple_monthly_goals', JSON.stringify(monthlyGoals));
+            updateGoalUI();
+        }
+    }
+
+    // 수동 총 자산 기록 기능
+    function saveCurrentTotalAsset() {
+        const monthVal = document.getElementById('saveAssetMonth').value; // YYYY-MM
+        if (!monthVal) {
+            alert("기록할 달을 선택해주세요.");
+            return;
+        }
+
+        // 현재 자산 계산 (updateSummary와 동일한 로직 적용)
+        const allIncome = transactions.filter(t => t.type === 'income' && !t.accountId && t.category !== '투자손익').reduce((acc, cur) => acc + (parseInt(cur.amount) || 0), 0);
+        const allExpense = transactions.filter(t => t.type === 'expense' && !t.accountId && t.category !== '투자손익').reduce((acc, cur) => acc + (parseInt(cur.amount) || 0), 0);
+        const currentCash = allIncome - allExpense;
+        
+        const stockAsset = accounts.filter(a => a.type === 'stock').reduce((acc, cur) => acc + (parseInt(cur.balance) || 0), 0);
+        const savingsAsset = accounts.filter(a => a.type === 'savings').reduce((acc, cur) => acc + (parseInt(cur.balance) || 0), 0);
+
+        const currentTotalAsset = currentCash + stockAsset + savingsAsset;
+
+        // 로컬 스토리지에 데이터 저장
+        monthlyAssetsData[monthVal] = currentTotalAsset;
+        localStorage.setItem('couple_monthly_assets', JSON.stringify(monthlyAssetsData));
+        
+        alert(`[${monthVal}] 총 자산이 ${currentTotalAsset.toLocaleString()}원으로 기록되었습니다!\\n자산 변동 리포트에서 확인하실 수 있습니다.`);
+        
+        // 그래프가 띄워져 있다면 즉시 갱신
+        if (assetTrendChartInstance) {
+            renderAssetTrendChart();
         }
     }
 
@@ -674,21 +738,6 @@
                 
                 localStorage.setItem('couple_accounts', JSON.stringify(accounts));
 
-                // 평가액 차액 기록 (수정: 주식일 때만 투자손익 내역 남김, 예적금은 잔액만 조용히 변경)
-                if (diff !== 0 && acc.type === 'stock') {
-                    const today = new Date().toISOString().split('T')[0];
-                    transactions.push({
-                        id: Date.now(),
-                        date: today,
-                        type: diff > 0 ? 'income' : 'expense',
-                        category: '투자손익',
-                        amount: Math.abs(diff),
-                        desc: `[평가조정] ${acc.name}`,
-                        assetType: acc.type,
-                        accountId: acc.id
-                    });
-                    saveData();
-                }
                 renderAccountList();
                 renderAll();
                 alert("수정되었습니다.");
@@ -747,20 +796,6 @@
                     acc.balance = newBalance;
                     localStorage.setItem('couple_accounts', JSON.stringify(accounts));
 
-                    if (diff !== 0) {
-                        const today = new Date().toISOString().split('T')[0];
-                        transactions.push({
-                            id: Date.now(),
-                            date: today,
-                            type: diff > 0 ? 'income' : 'expense',
-                            category: '투자손익',
-                            amount: Math.abs(diff),
-                            desc: `[시세연동] ${acc.name} (${qty}개)`,
-                            assetType: acc.type,
-                            accountId: acc.id
-                        });
-                        saveData();
-                    }
                     renderAccountList();
                     renderAll();
                     alert(`업데이트 완료!\n평가액: ${newBalance.toLocaleString()}원\n변동폭: ${diff > 0 ? '+' : ''}${diff.toLocaleString()}원`);
@@ -1197,6 +1232,7 @@
         renderCalendar(currentMonthTransactions);
         renderCharts(currentMonthTransactions);
         updateSummary(currentMonthTransactions);
+        updateGoalUI();
     }
 
     // 리스트 렌더링 (필터된 데이터 사용)
@@ -1235,25 +1271,45 @@
     // 요약 정보 업데이트
     function updateSummary(currentData) {
         // 전체 자산 계산 (전체 데이터 기준)
-        // 수정: 계좌와 연동된 내역(accountId가 있는 경우)은 해당 계좌 잔액에 이미 반영되어 있으므로, 현금 계산에서는 제외 (중복 합산 방지)
-        const allIncome = transactions.filter(t => t.type === 'income' && !t.accountId).reduce((acc, cur) => acc + (parseInt(cur.amount) || 0), 0);
-        const allExpense = transactions.filter(t => t.type === 'expense' && !t.accountId).reduce((acc, cur) => acc + (parseInt(cur.amount) || 0), 0);
+        // accountId가 있는 내역은 해당 계좌 잔액에 이미 반영되므로 현금 계산에서는 제외
+        // 추가: '투자손익' 카테고리는 순수입/순지출 계산에서 제외
+        const allIncome = transactions
+            .filter(t => t.type === 'income' && !t.accountId && t.category !== '투자손익')
+            .reduce((acc, cur) => acc + (parseInt(cur.amount) || 0), 0);
+
+        const allExpense = transactions
+            .filter(t => t.type === 'expense' && !t.accountId && t.category !== '투자손익')
+            .reduce((acc, cur) => acc + (parseInt(cur.amount) || 0), 0);
+
         const currentCash = allIncome - allExpense;
         
-        // 계좌 총액 계산 (수정: 평단가가 아닌 현재 평가금(balance) 기준으로 합산하여 실시간 가치 반영)
-        const stockAsset = accounts.filter(a => a.type === 'stock').reduce((acc, cur) => acc + (parseInt(cur.balance) || 0), 0);
-        
-        const savingsAsset = accounts.filter(a => a.type === 'savings').reduce((acc, cur) => acc + (parseInt(cur.balance) || 0), 0);
-        
-        document.getElementById('totalAsset').innerText = (currentCash + stockAsset + savingsAsset).toLocaleString() + "원";
-        document.getElementById('stockAssetDisplay').innerText = stockAsset.toLocaleString() + "원";
-        document.getElementById('stockAccountCount').innerText = `* 등록된 계좌: ${accounts.filter(a => a.type === 'stock').length}개`;
-        document.getElementById('savingsAssetDisplay').innerText = savingsAsset.toLocaleString() + "원";
-        document.getElementById('savingsAccountCount').innerText = `* 등록된 계좌: ${accounts.filter(a => a.type === 'savings').length}개`;
+        // 계좌 총액 계산
+        const stockAsset = accounts
+            .filter(a => a.type === 'stock')
+            .reduce((acc, cur) => acc + (parseInt(cur.balance) || 0), 0);
 
-        // 월별 요약 (현재 월 데이터 기준)
-        const monthIncome = currentData.filter(t => t.type === 'income').reduce((acc, cur) => acc + cur.amount, 0);
-        const monthExpense = currentData.filter(t => t.type === 'expense').reduce((acc, cur) => acc + cur.amount, 0);
+        const savingsAsset = accounts
+            .filter(a => a.type === 'savings')
+            .reduce((acc, cur) => acc + (parseInt(cur.balance) || 0), 0);
+
+        document.getElementById('totalAsset').innerText =
+            (currentCash + stockAsset + savingsAsset).toLocaleString() + "원";
+        document.getElementById('stockAssetDisplay').innerText = stockAsset.toLocaleString() + "원";
+        document.getElementById('stockAccountCount').innerText =
+            `* 등록된 계좌: ${accounts.filter(a => a.type === 'stock').length}개`;
+        document.getElementById('savingsAssetDisplay').innerText = savingsAsset.toLocaleString() + "원";
+        document.getElementById('savingsAccountCount').innerText =
+            `* 등록된 계좌: ${accounts.filter(a => a.type === 'savings').length}개`;
+
+        // 월별 요약
+        // 추가: '투자손익' 카테고리는 월 수입/지출에서도 제외
+        const monthIncome = currentData
+            .filter(t => t.type === 'income' && t.category !== '투자손익')
+            .reduce((acc, cur) => acc + (parseInt(cur.amount) || 0), 0);
+
+        const monthExpense = currentData
+            .filter(t => t.type === 'expense' && t.category !== '투자손익')
+            .reduce((acc, cur) => acc + (parseInt(cur.amount) || 0), 0);
 
         document.getElementById('monthIncome').innerText = monthIncome.toLocaleString() + "원";
         document.getElementById('monthExpense').innerText = monthExpense.toLocaleString() + "원";
@@ -1270,8 +1326,9 @@
             progressBar.style.width = `${percent}%`;
             progressBar.className = `progress-bar ${percent > 90 ? 'bg-danger' : (percent > 50 ? 'bg-warning' : 'bg-info')}`;
         } else {
-            budgetText.innerText = "예산이 설정되지 않았습니다.";
-            progressBar.style.width = "0%";
+            budgetText.innerText = '예산 미설정';
+            progressBar.style.width = '0%';
+            progressBar.className = 'progress-bar bg-info';
         }
     }
 
@@ -1282,13 +1339,18 @@
     let assetTrendChartInstance = null;
 
     function renderCharts(data) {
-        // 데이터 가공
-        const categories = {};
-        data.filter(t => t.type === 'expense').forEach(t => {
-            categories[t.category] = (categories[t.category] || 0) + t.amount;
-        });
+        // 투자손익 제외한 데이터
+        const filteredData = data.filter(t => t.category !== '투자손익');
 
-        // 파이 차트 (카테고리별)
+        // 파이 차트용 지출 카테고리 집계
+        const categories = {};
+        filteredData
+            .filter(t => t.type === 'expense')
+            .forEach(t => {
+                categories[t.category] = (categories[t.category] || 0) + t.amount;
+            });
+
+        // 파이 차트
         const ctxPie = document.getElementById('pieChart').getContext('2d');
         if (pieChartInstance) pieChartInstance.destroy();
         pieChartInstance = new Chart(ctxPie, {
@@ -1302,9 +1364,14 @@
             }
         });
 
-        // 바 차트 (월별 추이 - 간단하게 수입 vs 지출 총액 비교로 구현)
-        const totalIncome = data.filter(t => t.type === 'income').reduce((acc, cur) => acc + cur.amount, 0);
-        const totalExpense = data.filter(t => t.type === 'expense').reduce((acc, cur) => acc + cur.amount, 0);
+        // 바 차트도 투자손익 제외
+        const totalIncome = filteredData
+            .filter(t => t.type === 'income')
+            .reduce((acc, cur) => acc + (parseInt(cur.amount) || 0), 0);
+
+        const totalExpense = filteredData
+            .filter(t => t.type === 'expense')
+            .reduce((acc, cur) => acc + (parseInt(cur.amount) || 0), 0);
 
         const ctxBar = document.getElementById('barChart').getContext('2d');
         if (barChartInstance) barChartInstance.destroy();
@@ -1318,10 +1385,13 @@
                     backgroundColor: ['#198754', '#dc3545']
                 }]
             },
-            options: { scales: { y: { beginAtZero: true } } }
+            options: {
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
         });
     }
-
     // 연간 리포트 기능
     const yearlyReportModal = new bootstrap.Modal(document.getElementById('yearlyReportModal'));
 
@@ -1477,86 +1547,144 @@
     function renderAssetTrendChart() {
         const ctx = document.getElementById('assetTrendChart').getContext('2d');
         const year = currentDate.getFullYear();
-        
-        // 1. 현재 총 자산 계산
-        const allIncome = transactions.filter(t => t.type === 'income').reduce((acc, cur) => acc + cur.amount, 0);
-        const allExpense = transactions.filter(t => t.type === 'expense').reduce((acc, cur) => acc + cur.amount, 0);
-        const currentCash = allIncome - allExpense;
-        const stockAsset = accounts.filter(a => a.type === 'stock').reduce((acc, cur) => acc + cur.balance, 0);
-        const savingsAsset = accounts.filter(a => a.type === 'savings').reduce((acc, cur) => acc + cur.balance, 0);
-        const currentTotalAsset = currentCash + stockAsset + savingsAsset;
-
-        // 2. 올해 월별 자산 흐름 역추적
-        // 소비(Consumption) 정의: 지출 중 '자산 연동(이체)'이 아닌 것.
-        // 이체는 내 자산 내에서의 이동이므로 총 자산 감소가 아님.
-        const calcNetWorth = (transList) => {
-            let income = 0;
-            let consumption = 0;
-            transList.forEach(t => {
-                if (t.type === 'income') income += t.amount;
-                else if (t.type === 'expense' && t.assetType === 'none') consumption += t.amount;
-            });
-            return income - consumption;
-        };
-
-        const totalCalculatedNetWorth = calcNetWorth(transactions);
-        const offset = currentTotalAsset - totalCalculatedNetWorth; // 초기 자산 및 평가 손익 보정값
 
         const monthlyAssets = [];
+        const monthlyIncomes = [];
+        const monthlyExpenses = [];
         const labels = [];
 
-        // 1월부터 12월까지 누적 자산 계산
         for (let m = 0; m < 12; m++) {
-            const targetDate = new Date(year, m + 1, 0); // m월의 마지막 날
-            const pastTransactions = transactions.filter(t => new Date(t.date) <= targetDate);
+            const monthStr = String(m + 1).padStart(2, '0');
+            const key = `${year}-${monthStr}`;
             
-            const accumulated = calcNetWorth(pastTransactions);
-            monthlyAssets.push(accumulated + offset);
+            // 기록된 데이터가 있으면 가져오고 없으면 null (건너뛰기 처리)
+            monthlyAssets.push(monthlyAssetsData[key] !== undefined ? monthlyAssetsData[key] : null);
+
+            const startOfMonth = new Date(year, m, 1);
+            const targetDate = new Date(year, m + 1, 0); // m월의 마지막 날
+            
+            // 해당 월의 단순 수입/지출 (막대 그래프용)
+            const monthTransactions = transactions.filter(t => {
+                const d = new Date(t.date);
+                return d >= startOfMonth && d <= targetDate;
+            });
+            
+            let mInc = 0;
+            let mExp = 0;
+            monthTransactions.forEach(t => {
+                if (t.category === '투자손익') return; // 평가액 변동은 현금 흐름에서 제외
+                if (t.type === 'income') mInc += t.amount;
+                if (t.type === 'expense') mExp += t.amount;
+            });
+            monthlyIncomes.push(mInc);
+            monthlyExpenses.push(mExp);
+            
             labels.push(`${m + 1}월`);
         }
 
         if (assetTrendChartInstance) assetTrendChartInstance.destroy();
         assetTrendChartInstance = new Chart(ctx, {
-            type: 'line',
+            type: 'bar',
             data: {
                 labels: labels,
                 datasets: [{
-                    label: `${year}년 총 자산 추이`,
+                    type: 'line',
+                    label: '총 자산 추이 (기록됨)',
                     data: monthlyAssets,
                     borderColor: '#6c5ce7',
                     backgroundColor: 'rgba(108, 92, 231, 0.1)',
+                    borderWidth: 2,
                     fill: true,
-                    tension: 0.3 // 부드러운 곡선
+                    tension: 0.3,
+                    spanGaps: true, // 값이 비어있는 달을 넘어서 선을 이어줌
+                    yAxisID: 'y'
+                },
+                {
+                    type: 'bar',
+                    label: '월별 수입',
+                    data: monthlyIncomes,
+                    backgroundColor: 'rgba(25, 135, 84, 0.6)',
+                    borderRadius: 4,
+                    yAxisID: 'y1'
+                },
+                {
+                    type: 'bar',
+                    label: '월별 지출',
+                    data: monthlyExpenses,
+                    backgroundColor: 'rgba(220, 53, 69, 0.6)',
+                    borderRadius: 4,
+                    yAxisID: 'y1'
                 }]
             },
             options: {
                 responsive: true,
-                plugins: {
-                    tooltip: { callbacks: { label: function(context) { return '자산: ' + context.parsed.y.toLocaleString() + '원'; } } }
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
                 },
-                scales: { y: { beginAtZero: false } }
+                plugins: {
+                    tooltip: { callbacks: { label: function(context) { return context.dataset.label + ': ' + context.parsed.y.toLocaleString() + '원'; } } }
+                },
+                scales: {
+                    y: { 
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: { display: true, text: '총 자산 (원)' },
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: { display: true, text: '수입/지출 (원)' },
+                        grid: { drawOnChartArea: false },
+                        beginAtZero: true
+                    }
+                }
             }
         });
     }
 
     // 7. 데이터 백업 및 복구 기능
-    function exportData() {
+    async function exportData() {
         const data = {
             transactions: transactions,
             appTitle: appTitle,
+            monthlyGoals: monthlyGoals,
+            monthlyAssetsData: monthlyAssetsData,
             accounts: accounts,
             categories: categories,
             monthlyBudgets: monthlyBudgets,
             fixedExpenses: fixedExpenses
         };
-        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data));
-        const downloadAnchorNode = document.createElement('a');
-        downloadAnchorNode.setAttribute("href", dataStr);
-        const dateStr = new Date().toISOString().slice(0,10);
-        downloadAnchorNode.setAttribute("download", `가계부_백업_${dateStr}.json`);
-        document.body.appendChild(downloadAnchorNode);
-        downloadAnchorNode.click();
-        downloadAnchorNode.remove();
+        const jsonString = JSON.stringify(data, null, 2); // 데이터를 보기 좋게 정렬
+
+        // 최신 브라우저용 File System Access API (덮어쓰기 지원)
+        if (window.showSaveFilePicker) {
+            try {
+                const defaultName = `가계부_백업_${new Date().toISOString().slice(0,10)}.json`;
+                const handle = await window.showSaveFilePicker({
+                    suggestedName: defaultName,
+                    types: [{ description: 'JSON 파일', accept: { 'application/json': ['.json'] } }],
+                });
+                
+                const writable = await handle.createWritable();
+                await writable.write(jsonString);
+                await writable.close();
+            } catch (err) {
+                if (err.name !== 'AbortError') console.error(err);
+            }
+        } else {
+            // 기존 다운로드 방식 (사파리 등 미지원 브라우저용 폴백)
+            const fileName = `가계부_백업_${new Date().toISOString().slice(0,10)}.json`;
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(jsonString);
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", fileName);
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+        }
     }
 
     function exportToCSV() {
@@ -1594,6 +1722,8 @@
                 if (confirm("현재 데이터를 덮어쓰고 백업 파일을 불러오시겠습니까? (기존 데이터는 사라집니다)")) {
                     localStorage.setItem('couple_account_book', JSON.stringify(data.transactions || []));
                     localStorage.setItem('budget_title', data.appTitle || '커플 가계부');
+                    localStorage.setItem('couple_monthly_goals', JSON.stringify(data.monthlyGoals || {}));
+                    localStorage.setItem('couple_monthly_assets', JSON.stringify(data.monthlyAssetsData || {}));
                     localStorage.setItem('couple_accounts', JSON.stringify(data.accounts || []));
                     localStorage.setItem('couple_categories', JSON.stringify(data.categories || ['식비', '교통', '쇼핑', '주거/통신', '월급', '기타']));
                     localStorage.setItem('couple_monthly_budgets', JSON.stringify(data.monthlyBudgets || {}));
