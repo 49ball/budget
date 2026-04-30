@@ -504,7 +504,8 @@
     let currentDate = new Date(); // 현재 보고 있는 달
     let selectedDate = null; // 선택된 날짜 저장
     let editingId = null; // 현재 수정 중인 내역 ID
-    let priceApiUrl = localStorage.getItem('budget_price_api_url') || '';
+    const defaultPriceApiUrl = 'https://stock-price-worker.49ball.workers.dev';
+    let priceApiUrl = localStorage.getItem('budget_price_api_url') || defaultPriceApiUrl;
     
     // 초기 실행
     document.addEventListener('DOMContentLoaded', () => {
@@ -960,7 +961,7 @@
 
         const input = prompt(
             "Cloudflare Worker 주소를 입력해주세요.\n예: https://budget-price-worker.계정명.workers.dev",
-            ""
+            defaultPriceApiUrl
         );
         if (!input) return '';
 
