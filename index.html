@@ -95,6 +95,51 @@
             grid-template-columns: repeat(7, 1fr);
             gap: 5px;
         }
+        .account-list-item {
+            gap: 12px;
+        }
+        .account-actions {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            gap: 6px;
+            min-width: 260px;
+        }
+        .account-actions .btn {
+            margin: 0 !important;
+            white-space: nowrap;
+        }
+        .asset-ticker-row {
+            display: flex !important;
+            flex-wrap: nowrap !important;
+            gap: 8px;
+            width: 100%;
+        }
+        .asset-ticker-field {
+            flex: 1 1 0;
+            min-width: 0;
+        }
+        .asset-ticker-button {
+            flex: 0 0 120px;
+            min-width: 120px;
+        }
+        .asset-ticker-button .btn {
+            width: 100%;
+            padding-left: 10px;
+            padding-right: 10px;
+            white-space: nowrap;
+        }
+        @media (max-width: 576px) {
+            .account-list-item {
+                align-items: flex-start !important;
+                flex-direction: column;
+            }
+            .account-actions {
+                justify-content: flex-start;
+                min-width: 0;
+                width: 100%;
+            }
+        }
     </style>
 </head>
 <body>
@@ -106,6 +151,7 @@
             <button class="btn btn-outline-light btn-sm me-2" onclick="openFixedExpenseModal()">🔄 고정지출 관리</button>
             <button class="btn btn-outline-warning btn-sm" onclick="openYearlyReport()">📅 연간 리포트</button>
             <button class="btn btn-outline-primary btn-sm" onclick="openAssetTrendReport()">📈 자산 변동</button>
+            <button class="btn btn-outline-success btn-sm ms-2" onclick="syncAllStockPrices()">📈 시세 업데이트</button>
             <button class="btn btn-outline-info btn-sm ms-2" onclick="exportData()">💾 백업 저장</button>
             <button class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('importFile').click()">📂 백업 불러오기</button>
             <button class="btn btn-outline-success btn-sm" onclick="exportToCSV()">📊 엑셀 저장</button>
@@ -144,6 +190,7 @@
                         <h3 id="stockAssetDisplay">0원</h3>
                     </div>
                     <small id="stockAccountCount">* 등록된 계좌: 0개</small>
+                    <br><small id="priceUpdateStatus">시세 업데이트 전</small>
                 </div>
             </div>
         </div>
@@ -328,7 +375,7 @@
 
 <!-- 계좌 관리 모달 -->
 <div class="modal fade" id="accountManagerModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="accountManagerTitle">계좌 관리</h5>
@@ -345,11 +392,18 @@
                     <div class="col-8">
                         <input type="text" id="newAccountName" class="form-control" placeholder="계좌 이름 (예: 삼성전자, 업비트)">
                     </div>
-                    <div class="col-6">
-                        <input type="number" id="newAccountBalance" class="form-control" placeholder="현재 총 평가금(잔액)">
-                    </div>
-                    <div class="col-6">
-                        <input type="text" id="newAccountTicker" class="form-control" placeholder="ID (예: bitcoin, 005930)">
+                    <div class="col-12">
+                        <div class="asset-ticker-row" style="display:flex; flex-wrap:nowrap; gap:8px; width:100%;">
+                            <div class="asset-ticker-field" style="flex:1 1 0; min-width:0;">
+                                <input type="number" id="newAccountBalance" class="form-control" placeholder="현재 총 평가금(잔액)">
+                            </div>
+                            <div class="asset-ticker-field" style="flex:1 1 0; min-width:0;">
+                                <input type="text" id="newAccountTicker" class="form-control" placeholder="티커 (예: AAPL, 005930.KS)">
+                            </div>
+                            <div class="asset-ticker-button" style="flex:0 0 120px; min-width:120px;">
+                                <button class="btn btn-outline-secondary" type="button" onclick="searchTickerForNewAccount()">찾기</button>
+                            </div>
+                        </div>
                     </div>
                     <!-- 숨겨진 상세 입력 필드 -->
                     <div class="col-6"><input type="number" id="newAccountAvgPrice" class="form-control" placeholder="평단가 (선택)" style="display:none;"></div>
@@ -367,9 +421,9 @@
                 </div>
                 <div class="mt-2 text-muted small bg-light p-2 rounded">
                     <strong>💡 시세 연동 팁:</strong><br>
-                    - <b>코인:</b> bitcoin, ethereum, ripple, dogecoin 등 (CoinGecko ID)<br>
-                    - <b>환율:</b> USD (달러 보유 시)<br>
-                    - <b>주식:</b> 종목코드 입력 (예: 005930) <span class="text-danger">* 별도 서버 실행 필요</span>
+                    - <b>미국 주식:</b> AAPL, NVDA, MSFT 등 Yahoo Finance 티커<br>
+                    - <b>한국 주식:</b> 005930.KS, 035720.KS, 086520.KQ 등 (.KS/.KQ 권장)<br>
+                    - <b>원화 환산:</b> USD 주식은 시세 업데이트 시 환율을 함께 반영합니다.
                 </div>
             </div>
         </div>
@@ -450,6 +504,7 @@
     let currentDate = new Date(); // 현재 보고 있는 달
     let selectedDate = null; // 선택된 날짜 저장
     let editingId = null; // 현재 수정 중인 내역 ID
+    let priceApiUrl = localStorage.getItem('budget_price_api_url') || '';
     
     // 초기 실행
     document.addEventListener('DOMContentLoaded', () => {
@@ -473,6 +528,10 @@
         
         updateTitleUI();
         renderCategoryOptions();
+        const lastPriceUpdate = localStorage.getItem('budget_last_price_update');
+        if (lastPriceUpdate) {
+            document.getElementById('priceUpdateStatus').innerText = `최근 업데이트: ${lastPriceUpdate}`;
+        }
         renderAll();
     });
 
@@ -636,7 +695,7 @@
             // 시세 연동 버튼 (티커가 있을 경우)
             let syncBtn = '';
             if (acc.ticker) {
-                syncBtn = `<button class="btn btn-sm btn-outline-success me-1" onclick="fetchAndApplyPrice(${acc.id}, '${acc.ticker}')" title="현재 시세로 업데이트">🔄 시세 적용</button>`;
+                syncBtn = `<button class="btn btn-sm btn-outline-success me-1" onclick="fetchAndApplyPrice(${acc.id})" title="현재 시세로 업데이트">🔄 시세 적용</button>`;
             }
 
             // 상세 타입 뱃지
@@ -649,9 +708,13 @@
             if (acc.quantity > 0) {
                 detailInfo = `<br><small class="text-success" style="font-size: 0.75em;">${acc.quantity}주 / 평단 ${parseInt(acc.avgPrice || 0).toLocaleString()}원</small>`;
             }
+            if (acc.lastPrice && acc.lastPriceAt) {
+                const updatedAt = new Date(acc.lastPriceAt).toLocaleString('ko-KR');
+                detailInfo += `<br><small class="text-muted" style="font-size: 0.72em;">최근가 ${Math.round(acc.lastPrice).toLocaleString()}${acc.lastPriceCurrency || ''} · ${updatedAt}</small>`;
+            }
 
             list.innerHTML += `
-                <li class="list-group-item d-flex justify-content-between align-items-center">
+                <li class="list-group-item d-flex justify-content-between align-items-center account-list-item">
                     <div>
                         <strong>${acc.name}</strong>
                         ${badge}
@@ -659,9 +722,10 @@
                         <br><small class="text-muted">${acc.balance.toLocaleString()}원</small>
                         ${detailInfo}
                     </div>
-                    <div>
+                    <div class="account-actions">
                         ${syncBtn}
-                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editAccount(${acc.id})">${acc.type === 'stock' ? '평가액 수정' : '금액 수정'}</button>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="editAccountInfo(${acc.id})">정보 수정</button>
+                        <button class="btn btn-sm btn-outline-primary" onclick="editAccount(${acc.id})">${acc.type === 'stock' ? '평가액 수정' : '금액 수정'}</button>
                         <button class="btn btn-sm btn-outline-danger" onclick="deleteAccount(${acc.id})">삭제</button>
                     </div>
                 </li>
@@ -699,6 +763,112 @@
         } else {
             alert("계좌 이름을 입력해주세요.");
         }
+    }
+
+    async function searchTicker(query) {
+        const apiUrl = getPriceApiUrl();
+        if (!apiUrl) throw new Error('시세 API 주소가 설정되지 않았습니다.');
+
+        const url = `${apiUrl}/search?q=${encodeURIComponent(query)}`;
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+            throw new Error(data.message || '티커 검색에 실패했습니다.');
+        }
+
+        return data.results || [];
+    }
+
+    async function chooseTicker(query) {
+        const searchText = String(query || '').trim();
+        if (!searchText) {
+            alert("검색할 종목명이나 티커를 입력해주세요.");
+            return '';
+        }
+
+        try {
+            const results = await searchTicker(searchText);
+            if (results.length === 0) {
+                alert("검색 결과가 없습니다.\n예: apple, samsung electronics, nvidia처럼 검색해보세요.");
+                return '';
+            }
+
+            const choices = results.slice(0, 8);
+            const message = choices
+                .map((item, index) => `${index + 1}. ${item.symbol} - ${item.name || ''} (${item.exchange || item.type || ''})`)
+                .join('\n');
+            const selected = prompt(`사용할 티커 번호를 입력해주세요:\n\n${message}`, "1");
+            if (selected === null) return '';
+
+            const index = parseInt(selected, 10) - 1;
+            if (!choices[index]) {
+                alert("올바른 번호를 입력해주세요.");
+                return '';
+            }
+
+            return choices[index].symbol;
+        } catch (error) {
+            alert(`티커 검색에 실패했습니다.\n${error.message}`);
+            return '';
+        }
+    }
+
+    async function searchTickerForNewAccount() {
+        const nameInput = document.getElementById('newAccountName');
+        const tickerInput = document.getElementById('newAccountTicker');
+        const query = tickerInput.value.trim() || nameInput.value.trim();
+        const ticker = await chooseTicker(query);
+        if (ticker) tickerInput.value = ticker;
+    }
+
+    async function editAccountInfo(id) {
+        const acc = accounts.find(a => a.id === id);
+        if (!acc) return;
+
+        const newName = prompt("계좌 이름을 입력하세요:", acc.name || "");
+        if (newName === null) return;
+
+        let newTicker = acc.ticker || "";
+        if (acc.type === 'stock' && acc.detailType !== 'deposit') {
+            const tickerInput = prompt("Yahoo Finance 티커를 입력하세요.\n모르면 빈칸으로 둔 뒤 다음 검색에서 찾을 수 있습니다.", newTicker || newName);
+            if (tickerInput === null) return;
+
+            newTicker = tickerInput.trim();
+            if (!newTicker || confirm(`'${newTicker}'로 티커를 검색해볼까요?`)) {
+                const foundTicker = await chooseTicker(newTicker || newName);
+                if (foundTicker) newTicker = foundTicker;
+            }
+        }
+
+        let newQty = acc.quantity || 0;
+        let newAvg = acc.avgPrice || 0;
+        let newBalance = acc.balance || 0;
+
+        if (acc.type === 'stock') {
+            const qtyInput = prompt("보유 수량을 입력하세요:", newQty);
+            if (qtyInput === null) return;
+            newQty = parseFloat(qtyInput) || 0;
+
+            const avgInput = prompt("평균 매입 단가(평단)를 입력하세요:", newAvg);
+            if (avgInput === null) return;
+            newAvg = parseInt(avgInput) || 0;
+        }
+
+        const balanceInput = prompt(acc.type === 'stock' ? "현재 평가액을 입력하세요:" : "현재 잔액을 입력하세요:", newBalance);
+        if (balanceInput === null) return;
+        newBalance = parseInt(balanceInput) || 0;
+
+        acc.name = newName.trim() || acc.name;
+        acc.ticker = newTicker;
+        acc.quantity = newQty;
+        acc.avgPrice = newAvg;
+        acc.balance = newBalance;
+
+        localStorage.setItem('couple_accounts', JSON.stringify(accounts));
+        renderAccountList();
+        renderAll();
+        alert("계좌 정보가 수정되었습니다.");
     }
 
     function editAccount(id) {
@@ -747,65 +917,203 @@
         }
     }
 
-    // 시세 연동 기능 (API 호출)
-    async function fetchAndApplyPrice(id, ticker) {
+    function normalizeYahooTicker(ticker) {
+        const value = String(ticker || '').trim().toUpperCase();
+        const stockAliases = {
+            애플: 'AAPL',
+            APPLE: 'AAPL',
+            엔비디아: 'NVDA',
+            NVIDIA: 'NVDA',
+            테슬라: 'TSLA',
+            TESLA: 'TSLA',
+            마이크로소프트: 'MSFT',
+            MICROSOFT: 'MSFT',
+            삼성전자: '005930.KS',
+            삼성: '005930.KS',
+            네이버: '035420.KS',
+            NAVER: '035420.KS',
+            카카오: '035720.KS',
+            에코프로: '086520.KQ'
+        };
+        const cryptoAliases = {
+            BITCOIN: 'BTC-USD',
+            BTC: 'BTC-USD',
+            ETHEREUM: 'ETH-USD',
+            ETH: 'ETH-USD',
+            RIPPLE: 'XRP-USD',
+            XRP: 'XRP-USD',
+            DOGECOIN: 'DOGE-USD',
+            DOGE: 'DOGE-USD',
+            SOLANA: 'SOL-USD',
+            SOL: 'SOL-USD',
+            CARDANO: 'ADA-USD',
+            ADA: 'ADA-USD'
+        };
+        if (stockAliases[value]) return stockAliases[value];
+        if (cryptoAliases[value]) return cryptoAliases[value];
+        if (/^\d{6}$/.test(value)) return `${value}.KS`;
+        return value;
+    }
+
+    function getPriceApiUrl() {
+        if (priceApiUrl) return priceApiUrl;
+
+        const input = prompt(
+            "Cloudflare Worker 주소를 입력해주세요.\n예: https://budget-price-worker.계정명.workers.dev",
+            ""
+        );
+        if (!input) return '';
+
+        priceApiUrl = input.replace(/\/prices\/?$/, '').replace(/\/$/, '');
+        localStorage.setItem('budget_price_api_url', priceApiUrl);
+        return priceApiUrl;
+    }
+
+    async function fetchPriceQuotes(symbols) {
+        const apiUrl = getPriceApiUrl();
+        if (!apiUrl) throw new Error('시세 API 주소가 설정되지 않았습니다.');
+
+        const uniqueSymbols = [...new Set(symbols.map(normalizeYahooTicker).filter(Boolean))];
+        const url = `${apiUrl}/prices?symbols=${encodeURIComponent(uniqueSymbols.join(','))}`;
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+            throw new Error(data.message || '시세 API 호출에 실패했습니다.');
+        }
+
+        return data.quotes || {};
+    }
+
+    function applyQuoteToAccount(acc, quote) {
+        const qty = parseFloat(acc.quantity) || 0;
+        if (!qty) return { updated: false, reason: '보유 수량 없음' };
+
+        const krwPrice = parseFloat(quote.krwPrice || quote.price);
+        if (!krwPrice) return { updated: false, reason: '시세 없음' };
+
+        const oldBalance = parseInt(acc.balance) || 0;
+        const newBalance = Math.floor(krwPrice * qty);
+
+        acc.balance = newBalance;
+        acc.lastPrice = quote.price;
+        acc.lastPriceCurrency = quote.currency;
+        acc.lastKrwPrice = krwPrice;
+        acc.lastPriceAt = quote.marketTime || quote.updatedAt || new Date().toISOString();
+
+        return {
+            updated: true,
+            diff: newBalance - oldBalance,
+            newBalance: newBalance
+        };
+    }
+
+    async function syncAllStockPrices() {
+        const targets = accounts.filter(a => a.type === 'stock' && a.detailType !== 'deposit' && a.ticker);
+        if (targets.length === 0) {
+            alert("시세 업데이트할 주식/투자 계좌가 없습니다.\n계좌 관리에서 티커와 보유 수량을 먼저 입력해주세요.");
+            return;
+        }
+
+        const missingQty = targets.filter(a => !(parseFloat(a.quantity) > 0));
+        if (missingQty.length > 0) {
+            for (const acc of missingQty) {
+                const qtyInput = prompt(`'${acc.name}'의 보유 수량을 입력해주세요:`, acc.quantity || "1");
+                if (qtyInput === null) continue;
+
+                const qty = parseFloat(qtyInput);
+                if (!isNaN(qty) && qty > 0) {
+                    acc.quantity = qty;
+                }
+            }
+        }
+
+        const activeTargets = targets.filter(a => parseFloat(a.quantity) > 0);
+        if (activeTargets.length === 0) {
+            alert("보유 수량이 입력된 계좌가 없어 시세 업데이트를 중단했습니다.");
+            return;
+        }
+
+        try {
+            const status = document.getElementById('priceUpdateStatus');
+            if (status) status.innerText = '시세 업데이트 중...';
+
+            const quotes = await fetchPriceQuotes(activeTargets.map(a => a.ticker));
+            let updatedCount = 0;
+            let totalDiff = 0;
+            const failed = [];
+            const requestedSymbols = activeTargets.map(a => normalizeYahooTicker(a.ticker)).join(', ');
+
+            activeTargets.forEach(acc => {
+                const symbol = normalizeYahooTicker(acc.ticker);
+                const quote = quotes[symbol];
+                if (!quote) {
+                    failed.push(`${acc.name} (${symbol})`);
+                    return;
+                }
+
+                const result = applyQuoteToAccount(acc, quote);
+                if (result.updated) {
+                    updatedCount += 1;
+                    totalDiff += result.diff;
+                }
+            });
+
+            localStorage.setItem('couple_accounts', JSON.stringify(accounts));
+            renderAccountList();
+            renderAll();
+
+            const nowText = new Date().toLocaleString('ko-KR');
+            localStorage.setItem('budget_last_price_update', nowText);
+            if (status) status.innerText = `최근 업데이트: ${nowText}`;
+
+            let message = `${updatedCount}개 계좌의 시세를 업데이트했습니다.\n변동폭: ${totalDiff >= 0 ? '+' : ''}${totalDiff.toLocaleString()}원`;
+            if (failed.length > 0) {
+                message += `\n\n조회 실패:\n${failed.map(name => `- ${name}`).join('\n')}`;
+                message += `\n\n요청 티커: ${requestedSymbols}`;
+                message += "\n\n계좌 이름이 아니라 티커 칸에 Yahoo Finance 티커를 넣어주세요. 예: AAPL, NVDA, 005930.KS";
+            }
+            alert(message);
+        } catch (error) {
+            console.error(error);
+            alert(`시세 업데이트에 실패했습니다.\n${error.message}`);
+        }
+    }
+
+    // 시세 연동 기능 (Cloudflare Worker API 호출)
+    async function fetchAndApplyPrice(id) {
         const acc = accounts.find(a => a.id === id);
         if (!acc) return;
 
-        let price = 0;
-        let priceSource = '';
+        if (!(parseFloat(acc.quantity) > 0)) {
+            const qtyInput = prompt(`'${acc.name}'의 보유 수량을 입력해주세요:`, acc.quantity || "1");
+            if (qtyInput === null) return;
+            const qty = parseFloat(qtyInput);
+            if (isNaN(qty) || qty <= 0) {
+                alert("올바른 수량을 입력해주세요.");
+                return;
+            }
+            acc.quantity = qty;
+        }
 
         try {
-            if (ticker.toUpperCase() === 'USD') {
-                // 환율 API (Open Exchange Rates 등 무료 API 활용)
-                const res = await fetch('https://open.er-api.com/v6/latest/USD');
-                const data = await res.json();
-                price = data.rates.KRW;
-                priceSource = '1 USD';
-            } else if (/^\d{6}$/.test(ticker)) {
-                // 6자리 숫자면 주식 코드로 간주 -> 로컬 중계 서버로 요청
-                // 주의: 별도의 Node.js 서버(server.js)가 3000번 포트에서 실행 중이어야 함
-                const res = await fetch(`http://localhost:3000/stock?code=${ticker}`);
-                const data = await res.json();
-                if (!data.success) throw new Error(data.message || 'API 호출 실패');
-                
-                price = parseInt(data.price);
-                priceSource = `1주 (${ticker})`;
-            } else {
-                // 코인 API (CoinGecko)
-                const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ticker}&vs_currencies=krw`);
-                const data = await res.json();
-                if (!data[ticker]) {
-                    alert(`'${ticker}' 정보를 찾을 수 없습니다.\nCoinGecko ID를 확인해주세요 (예: bitcoin).`);
-                    return;
-                }
-                price = data[ticker].krw;
-                priceSource = `1 ${ticker}`;
+            const symbol = normalizeYahooTicker(acc.ticker);
+            const quotes = await fetchPriceQuotes([symbol]);
+            const quote = quotes[symbol];
+            if (!quote) {
+                alert(`'${acc.ticker}' 시세를 찾을 수 없습니다.\nYahoo Finance 티커를 확인해주세요.`);
+                return;
             }
 
-            // 사용자에게 수량 입력 받기
-            const qtyInput = prompt(`현재 시세: ${price.toLocaleString()}원 (${priceSource})\n\n보유 수량을 입력해주세요:`, "1");
-            
-            if (qtyInput !== null) {
-                const qty = parseFloat(qtyInput);
-                if (!isNaN(qty)) {
-                    const newBalance = Math.floor(price * qty); // 평가액 계산
-                    const diff = newBalance - acc.balance;
+            const result = applyQuoteToAccount(acc, quote);
+            localStorage.setItem('couple_accounts', JSON.stringify(accounts));
+            renderAccountList();
+            renderAll();
 
-                    // 업데이트 로직 (editAccount와 동일)
-                    acc.balance = newBalance;
-                    localStorage.setItem('couple_accounts', JSON.stringify(accounts));
-
-                    renderAccountList();
-                    renderAll();
-                    alert(`업데이트 완료!\n평가액: ${newBalance.toLocaleString()}원\n변동폭: ${diff > 0 ? '+' : ''}${diff.toLocaleString()}원`);
-                } else {
-                    alert("올바른 수량을 입력해주세요.");
-                }
-            }
+            alert(`업데이트 완료!\n평가액: ${result.newBalance.toLocaleString()}원\n변동폭: ${result.diff >= 0 ? '+' : ''}${result.diff.toLocaleString()}원`);
         } catch (error) {
             console.error(error);
-            alert("시세 정보를 가져오는데 실패했습니다.\n인터넷 연결을 확인하거나 잠시 후 다시 시도해주세요.");
+            alert(`시세 정보를 가져오는데 실패했습니다.\n${error.message}`);
         }
     }
 
@@ -1867,8 +2175,3 @@
 </script>
 </body>
 </html>
-```
-
-<!--
-[PROMPT_SUGGESTION]이제 이 파일을 GitHub에 올리고 나서 여자친구한테 어떤 주소를 보내줘야 해?[/PROMPT_SUGGESTION]
-[PROMPT_SUGGESTION]가계부 데이터를 엑셀 파일로도 다운로드할 수 있게 해줄 수 있어?[/PROMPT_SUGGESTION]
