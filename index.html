@@ -709,9 +709,19 @@
             if (acc.quantity > 0) {
                 detailInfo = `<br><small class="text-success" style="font-size: 0.75em;">${acc.quantity}주 / 평단 ${parseInt(acc.avgPrice || 0).toLocaleString()}원</small>`;
             }
+            const avgPrice = parseFloat(acc.avgPrice) || 0;
+            const quantity = parseFloat(acc.quantity) || 0;
+            const currentKrwPrice = parseFloat(acc.lastKrwPrice) || (quantity > 0 ? (parseInt(acc.balance) || 0) / quantity : 0);
+            if (avgPrice > 0 && quantity > 0 && currentKrwPrice > 0) {
+                const profitRate = ((currentKrwPrice - avgPrice) / avgPrice) * 100;
+                const profitAmount = Math.round((currentKrwPrice - avgPrice) * quantity);
+                const profitClass = profitRate >= 0 ? 'text-danger' : 'text-primary';
+                const profitSign = profitRate >= 0 ? '+' : '';
+                detailInfo += `<br><small class="${profitClass}" style="font-size: 0.75em;">평단 대비 ${profitSign}${profitRate.toFixed(2)}% (${profitSign}${profitAmount.toLocaleString()}원)</small>`;
+            }
             if (acc.lastPrice && acc.lastPriceAt) {
                 const updatedAt = new Date(acc.lastPriceAt).toLocaleString('ko-KR');
-                detailInfo += `<br><small class="text-muted" style="font-size: 0.72em;">최근가 ${Math.round(acc.lastPrice).toLocaleString()}${acc.lastPriceCurrency || ''} · ${updatedAt}</small>`;
+                detailInfo += `<br><small class="text-muted" style="font-size: 0.72em;">최근가 ${Math.round(acc.lastKrwPrice || acc.lastPrice).toLocaleString()}원 · ${updatedAt}</small>`;
             }
 
             list.innerHTML += `
