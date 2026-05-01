@@ -484,6 +484,12 @@
             <div class="modal-body">
                 <canvas id="assetTrendChart"></canvas>
                 <p class="text-center text-muted small mt-2">* 꺾은선: 직접 기록한 월별 총 자산 / 막대: 달마다의 단순 수입·지출 비교</p>
+                <hr>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="mb-0 fw-bold">기록된 자산</h6>
+                    <small class="text-muted">잘못 기록한 달은 삭제할 수 있어요</small>
+                </div>
+                <div id="monthlyAssetRecordList" class="list-group small"></div>
             </div>
         </div>
     </div>
@@ -589,6 +595,46 @@
         if (assetTrendChartInstance) {
             renderAssetTrendChart();
         }
+        renderMonthlyAssetRecords();
+    }
+
+    function deleteMonthlyAssetRecord(monthKey) {
+        if (monthlyAssetsData[monthKey] === undefined) return;
+
+        const amount = parseInt(monthlyAssetsData[monthKey]) || 0;
+        const confirmed = confirm(`[${monthKey}] 기록된 자산 ${amount.toLocaleString()}원을 삭제할까요?`);
+        if (!confirmed) return;
+
+        delete monthlyAssetsData[monthKey];
+        localStorage.setItem('couple_monthly_assets', JSON.stringify(monthlyAssetsData));
+        renderMonthlyAssetRecords();
+
+        if (assetTrendChartInstance) {
+            renderAssetTrendChart();
+        }
+    }
+
+    function renderMonthlyAssetRecords() {
+        const listEl = document.getElementById('monthlyAssetRecordList');
+        if (!listEl) return;
+
+        const records = Object.entries(monthlyAssetsData)
+            .sort(([a], [b]) => b.localeCompare(a));
+
+        if (records.length === 0) {
+            listEl.innerHTML = '<div class="text-muted py-2">아직 기록된 자산이 없습니다.</div>';
+            return;
+        }
+
+        listEl.innerHTML = records.map(([monthKey, amount]) => `
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>${monthKey}</strong>
+                    <span class="text-muted ms-2">${(parseInt(amount) || 0).toLocaleString()}원</span>
+                </div>
+                <button class="btn btn-outline-danger btn-sm" onclick="deleteMonthlyAssetRecord('${monthKey}')">삭제</button>
+            </div>
+        `).join('');
     }
 
     // 월 이동 기능
@@ -1726,6 +1772,7 @@
             assetTrendModal = new bootstrap.Modal(document.getElementById('assetTrendModal'));
         }
         assetTrendModal.show();
+        renderMonthlyAssetRecords();
         setTimeout(renderAssetTrendChart, 300);
     }
 
