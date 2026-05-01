@@ -173,7 +173,7 @@
                 <div class="card-body">
                     <h5 class="card-title">💰 현재 총 자산</h5>
                     <h2 id="totalAsset">0원</h2>
-                    <p class="mb-0">현금 + 주식 + 예적금</p>
+                    <p class="mb-0">등록된 자산 계좌 잔액 합계</p>
                     <hr class="border-light opacity-50 my-2">
                     <div class="d-flex align-items-center justify-content-between">
                         <input type="month" id="saveAssetMonth" class="form-control form-control-sm text-center" style="max-width: 120px; font-size: 0.85rem;">
@@ -262,10 +262,10 @@
             </div>
 
             <div class="col-12" id="normalAssetArea">
-                <label class="form-label small text-muted mb-1">자산 연동 (지출 시 해당 자산으로 금액 이동)</label>
+                <label class="form-label small text-muted mb-1">자산 표시 태그 (총자산에는 직접 반영되지 않음)</label>
                 <div class="btn-group w-100" role="group">
                     <input type="radio" class="btn-check" name="assetType" id="assetNone" value="none" checked onchange="toggleAccountSelect()">
-                    <label class="btn btn-outline-secondary" for="assetNone">연동 안함</label>
+                    <label class="btn btn-outline-secondary" for="assetNone">태그 없음</label>
                     <input type="radio" class="btn-check" name="assetType" id="assetStock" value="stock" onchange="toggleAccountSelect()">
                     <label class="btn btn-outline-success" for="assetStock">주식/투자</label>
                     <input type="radio" class="btn-check" name="assetType" id="assetSavings" value="savings" onchange="toggleAccountSelect()">
@@ -574,15 +574,10 @@
             return;
         }
 
-        // 현재 자산 계산 (updateSummary와 동일한 로직 적용)
-        const allIncome = transactions.filter(t => t.type === 'income' && !t.accountId && t.category !== '투자손익').reduce((acc, cur) => acc + (parseInt(cur.amount) || 0), 0);
-        const allExpense = transactions.filter(t => t.type === 'expense' && !t.accountId && t.category !== '투자손익').reduce((acc, cur) => acc + (parseInt(cur.amount) || 0), 0);
-        const currentCash = allIncome - allExpense;
-        
         const stockAsset = accounts.filter(a => a.type === 'stock').reduce((acc, cur) => acc + (parseInt(cur.balance) || 0), 0);
         const savingsAsset = accounts.filter(a => a.type === 'savings').reduce((acc, cur) => acc + (parseInt(cur.balance) || 0), 0);
 
-        const currentTotalAsset = currentCash + stockAsset + savingsAsset;
+        const currentTotalAsset = stockAsset + savingsAsset;
 
         // 로컬 스토리지에 데이터 저장
         monthlyAssetsData[monthVal] = currentTotalAsset;
@@ -1137,14 +1132,6 @@
         }
     }
 
-    function updateAccountBalance(id, amount) {
-        const acc = accounts.find(a => a.id === id);
-        if (acc) {
-            acc.balance = (parseInt(acc.balance) || 0) + amount; // 수정: 숫자형 변환 안전장치 추가
-            localStorage.setItem('couple_accounts', JSON.stringify(accounts));
-        }
-    }
-
     // 카테고리 관리 기능
     const categoryModal = new bootstrap.Modal(document.getElementById('categoryModal'));
     const fixedExpenseModal = new bootstrap.Modal(document.getElementById('fixedExpenseModal'));
@@ -1449,7 +1436,7 @@
         const accountId = assetType !== 'none' ? parseInt(document.getElementById('targetAccount').value) : null;
 
         if (assetType !== 'none' && !accountId) {
-            alert("연동할 계좌를 선택하거나 계좌를 먼저 등록해주세요.");
+            alert("표시할 계좌를 선택하거나 계좌를 먼저 등록해주세요.");
             return;
         }
 
@@ -1461,17 +1448,8 @@
             amount: amount,
             desc: desc,
             assetType: assetType,
-            accountId: accountId // 연동된 계좌 ID
+            accountId: accountId
         };
-
-        // 자산 연동 시 잔액 업데이트 (수입: 증가, 지출: 감소)
-        if (accountId) {
-            if (type === 'income') {
-                updateAccountBalance(accountId, amount);
-            } else if (type === 'expense') {
-                updateAccountBalance(accountId, -amount);
-            }
-        }
 
         transactions.push(newTransaction);
         saveData();
@@ -1481,7 +1459,7 @@
             cancelEdit(); // 수정 모드 종료 및 UI 초기화
             alert("수정되었습니다.");
         } else {
-            toggleAccountSelect(); // 셀렉트 박스 갱신 (잔액 업데이트 반영)
+            toggleAccountSelect();
             e.target.reset();
             document.getElementById('date').valueAsDate = new Date();
         }
@@ -1521,11 +1499,6 @@
                 
                 localStorage.setItem('couple_accounts', JSON.stringify(accounts));
             } 
-            // 2. 일반 자산 연동 내역인 경우 -> 롤백 (지출 취소면 잔액 증가, 수입 취소면 잔액 감소)
-            else if (target.accountId) {
-                updateAccountBalance(target.accountId, target.type === 'expense' ? target.amount : -target.amount);
-            }
-
             transactions = transactions.filter(t => t.id !== id);
             saveData();
             renderAll();
@@ -1589,20 +1562,7 @@
 
     // 요약 정보 업데이트
     function updateSummary(currentData) {
-        // 전체 자산 계산 (전체 데이터 기준)
-        // accountId가 있는 내역은 해당 계좌 잔액에 이미 반영되므로 현금 계산에서는 제외
-        // 추가: '투자손익' 카테고리는 순수입/순지출 계산에서 제외
-        const allIncome = transactions
-            .filter(t => t.type === 'income' && !t.accountId && t.category !== '투자손익')
-            .reduce((acc, cur) => acc + (parseInt(cur.amount) || 0), 0);
-
-        const allExpense = transactions
-            .filter(t => t.type === 'expense' && !t.accountId && t.category !== '투자손익')
-            .reduce((acc, cur) => acc + (parseInt(cur.amount) || 0), 0);
-
-        const currentCash = allIncome - allExpense;
-        
-        // 계좌 총액 계산
+        // 자산기반 방식: 총자산은 수입/지출 누적이 아니라 계좌 잔액 합계만 사용
         const stockAsset = accounts
             .filter(a => a.type === 'stock')
             .reduce((acc, cur) => acc + (parseInt(cur.balance) || 0), 0);
@@ -1612,7 +1572,7 @@
             .reduce((acc, cur) => acc + (parseInt(cur.balance) || 0), 0);
 
         document.getElementById('totalAsset').innerText =
-            (currentCash + stockAsset + savingsAsset).toLocaleString() + "원";
+            (stockAsset + savingsAsset).toLocaleString() + "원";
         document.getElementById('stockAssetDisplay').innerText = stockAsset.toLocaleString() + "원";
         document.getElementById('stockAccountCount').innerText =
             `* 등록된 계좌: ${accounts.filter(a => a.type === 'stock').length}개`;
@@ -1760,100 +1720,6 @@
 
     // 자산 변동 리포트 기능
     let assetTrendModal = null;
-
-    function openAssetTrendReport() {
-        if (!assetTrendModal) {
-            assetTrendModal = new bootstrap.Modal(document.getElementById('assetTrendModal'));
-        }
-        assetTrendModal.show();
-        setTimeout(renderAssetTrendChart, 300);
-    }
-
-    function renderAssetTrendChart() {
-        const ctx = document.getElementById('assetTrendChart').getContext('2d');
-        const year = currentDate.getFullYear();
-        
-        // 1. 현재 총 자산 계산
-        const allIncome = transactions.filter(t => t.type === 'income').reduce((acc, cur) => acc + cur.amount, 0);
-        const allExpense = transactions.filter(t => t.type === 'expense').reduce((acc, cur) => acc + cur.amount, 0);
-        const currentCash = allIncome - allExpense;
-        const stockAsset = accounts.filter(a => a.type === 'stock').reduce((acc, cur) => acc + cur.balance, 0);
-        const savingsAsset = accounts.filter(a => a.type === 'savings').reduce((acc, cur) => acc + cur.balance, 0);
-        const currentTotalAsset = currentCash + stockAsset + savingsAsset;
-
-        // 2. 올해 월별 자산 흐름 역추적
-        // (현재 자산에서 역으로 계산하거나, 기초 자산에서 쌓아올리는 방식 중 '누적 흐름'을 시각화)
-        
-        // 올해 1월 1일 이전의 기초 자산 계산 (추정)
-        // 기초 자산 = (이전 수입 - 이전 소비) + (초기 계좌 잔액 등 보정값)
-        // 보정값(Offset) = 현재 실제 자산 - (전체 누적 수입 - 전체 누적 소비)
-        
-        // 소비(Consumption) 정의: 지출 중 '자산 연동(이체)'이 아닌 것.
-        // 이체는 내 자산 내에서의 이동이므로 총 자산 감소가 아님.
-        const calcNetWorth = (transList) => {
-            let income = 0;
-            let consumption = 0;
-            transList.forEach(t => {
-                // 호환성 처리: assetType이 없으면 'none'(일반 지출)으로 간주
-                const aType = t.assetType || (t.isInvestment ? 'stock' : 'none');
-                if (t.type === 'income') income += t.amount;
-                else if (t.type === 'expense' && aType === 'none') consumption += t.amount;
-            });
-            return income - consumption;
-        };
-
-        const totalCalculatedNetWorth = calcNetWorth(transactions);
-        const offset = currentTotalAsset - totalCalculatedNetWorth; // 초기 자산 및 평가 손익 보정값
-
-        const monthlyAssets = [];
-        const labels = [];
-
-        // 1월부터 12월까지 누적 자산 계산
-        for (let m = 0; m < 12; m++) {
-            // 해당 월까지의 모든 내역 필터링 (연도 고려)
-            // 정확한 시점의 자산을 위해: (과거 모든 내역 + 올해 m월까지 내역)
-            const targetDate = new Date(year, m + 1, 0); // m월의 마지막 날
-            const pastTransactions = transactions.filter(t => new Date(t.date) <= targetDate);
-            
-            const accumulated = calcNetWorth(pastTransactions);
-            monthlyAssets.push(accumulated + offset);
-            labels.push(`${m + 1}월`);
-        }
-
-        if (assetTrendChartInstance) assetTrendChartInstance.destroy();
-        assetTrendChartInstance = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: `${year}년 총 자산 추이`,
-                    data: monthlyAssets,
-                    borderColor: '#6c5ce7',
-                    backgroundColor: 'rgba(108, 92, 231, 0.1)',
-                    fill: true,
-                    tension: 0.3 // 부드러운 곡선
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return '자산: ' + context.parsed.y.toLocaleString() + '원';
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    y: { beginAtZero: false } // 자산 변화를 더 잘 보여주기 위해 0부터 시작 안 함
-                }
-            }
-        });
-    }
-
-    // 자산 변동 리포트 기능
-    // let assetTrendModal = null;
 
     function openAssetTrendReport() {
         if (!assetTrendModal) {
@@ -2146,7 +2012,7 @@
         document.getElementById('amount').value = t.amount;
         document.getElementById('desc').value = t.desc;
 
-        // 자산 연동 상태 복구
+        // 자산 표시 태그 상태 복구
         const aType = t.assetType || 'none';
         if (aType === 'stock') document.getElementById('assetStock').checked = true;
         else if (aType === 'savings') document.getElementById('assetSavings').checked = true;
@@ -2179,7 +2045,7 @@
         saveBtn.className = "btn btn-primary w-100";
         document.getElementById('cancelEditBtn').style.display = 'none';
         
-        // 자산 연동 초기화
+        // 자산 표시 태그 초기화
         document.getElementById('assetNone').checked = true;
         toggleAccountSelect();
     }
