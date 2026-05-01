@@ -485,6 +485,21 @@
                 <canvas id="assetTrendChart"></canvas>
                 <p class="text-center text-muted small mt-2">* 꺾은선: 직접 기록한 월별 총 자산 / 막대: 달마다의 단순 수입·지출 비교</p>
                 <hr>
+                <div class="mb-3">
+                    <h6 class="mb-2 fw-bold">자산 직접 기록</h6>
+                    <div class="row g-2 align-items-center">
+                        <div class="col-md-4">
+                            <input type="month" id="manualAssetMonth" class="form-control">
+                        </div>
+                        <div class="col-md-5">
+                            <input type="text" id="manualAssetAmount" class="form-control" placeholder="총 자산 금액">
+                        </div>
+                        <div class="col-md-3 d-grid">
+                            <button class="btn btn-primary" onclick="saveManualMonthlyAsset()">추가/수정</button>
+                        </div>
+                    </div>
+                </div>
+                <hr>
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <h6 class="mb-0 fw-bold">기록된 자산</h6>
                     <small class="text-muted">잘못 기록한 달은 삭제할 수 있어요</small>
@@ -598,10 +613,56 @@
         renderMonthlyAssetRecords();
     }
 
+    function parseKrwAmount(value) {
+        return parseInt(String(value || '').replace(/[^0-9-]/g, '')) || 0;
+    }
+
+    function getPreviousMonthKey(date) {
+        const prevMonth = new Date(date.getFullYear(), date.getMonth() - 1, 1);
+        return getMonthKey(prevMonth);
+    }
+
+    function resetManualMonthlyAssetForm() {
+        const monthInput = document.getElementById('manualAssetMonth');
+        const amountInput = document.getElementById('manualAssetAmount');
+        if (monthInput && !monthInput.value) {
+            monthInput.value = getPreviousMonthKey(currentDate);
+        }
+        if (amountInput) amountInput.value = '';
+    }
+
+    function saveManualMonthlyAsset() {
+        const monthInput = document.getElementById('manualAssetMonth');
+        const amountInput = document.getElementById('manualAssetAmount');
+        const monthVal = monthInput ? monthInput.value : '';
+        const amount = parseKrwAmount(amountInput ? amountInput.value : '');
+
+        if (!monthVal) {
+            alert("기록할 달을 선택해주세요.");
+            return;
+        }
+
+        if (amount <= 0) {
+            alert("기록할 총 자산 금액을 입력해주세요.");
+            return;
+        }
+
+        monthlyAssetsData[monthVal] = amount;
+        localStorage.setItem('couple_monthly_assets', JSON.stringify(monthlyAssetsData));
+        renderMonthlyAssetRecords();
+
+        if (assetTrendChartInstance) {
+            renderAssetTrendChart();
+        }
+
+        if (amountInput) amountInput.value = '';
+        alert(`[${monthVal}] 총 자산이 ${amount.toLocaleString()}원으로 기록되었습니다.`);
+    }
+
     function deleteMonthlyAssetRecord(monthKey) {
         if (monthlyAssetsData[monthKey] === undefined) return;
 
-        const amount = parseInt(monthlyAssetsData[monthKey]) || 0;
+        const amount = parseKrwAmount(monthlyAssetsData[monthKey]);
         const confirmed = confirm(`[${monthKey}] 기록된 자산 ${amount.toLocaleString()}원을 삭제할까요?`);
         if (!confirmed) return;
 
@@ -630,7 +691,7 @@
             <div class="list-group-item d-flex justify-content-between align-items-center">
                 <div>
                     <strong>${monthKey}</strong>
-                    <span class="text-muted ms-2">${(parseInt(amount) || 0).toLocaleString()}원</span>
+                    <span class="text-muted ms-2">${parseKrwAmount(amount).toLocaleString()}원</span>
                 </div>
                 <button class="btn btn-outline-danger btn-sm" onclick="deleteMonthlyAssetRecord('${monthKey}')">삭제</button>
             </div>
@@ -1772,6 +1833,7 @@
             assetTrendModal = new bootstrap.Modal(document.getElementById('assetTrendModal'));
         }
         assetTrendModal.show();
+        resetManualMonthlyAssetForm();
         renderMonthlyAssetRecords();
         setTimeout(renderAssetTrendChart, 300);
     }
