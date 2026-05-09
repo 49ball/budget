@@ -6,6 +6,8 @@ const YAHOO_SEARCH_URLS = [
     'https://query1.finance.yahoo.com/v1/finance/search',
     'https://query2.finance.yahoo.com/v1/finance/search'
 ];
+const KRX_API_BASE_URL = 'https://data-dbg.krx.co.kr/svc/apis';
+const KRX_GOLD_SYMBOL = 'KRX-GOLD';
 const CORS_HEADERS = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, OPTIONS',
@@ -54,15 +56,112 @@ function normalizeSymbols(value) {
         CARDANO: 'ADA-USD',
         ADA: 'ADA-USD'
     };
+    const goldAliases = {
+        GOLD: KRX_GOLD_SYMBOL,
+        'KRX-GOLD': KRX_GOLD_SYMBOL,
+        KRXGOLD: KRX_GOLD_SYMBOL,
+        금: KRX_GOLD_SYMBOL,
+        금현물: KRX_GOLD_SYMBOL,
+        KRX금: KRX_GOLD_SYMBOL
+    };
 
     return [...new Set(String(value || '')
         .split(',')
         .map(symbol => symbol.trim().toUpperCase())
         .map(symbol => stockAliases[symbol] || symbol)
         .map(symbol => cryptoAliases[symbol] || symbol)
+        .map(symbol => goldAliases[symbol] || symbol)
         .map(symbol => /^\d{6}$/.test(symbol) ? `${symbol}.KS` : symbol)
         .filter(Boolean)
         .slice(0, 50))];
+}
+
+function parseNumber(value) {
+    if (typeof value === 'number') return value;
+    const normalized = String(value || '').replace(/,/g, '').replace(/[^\d.-]/g, '');
+    const parsed = parseFloat(normalized);
+    return Number.isFinite(parsed) ? parsed : null;
+}
+
+function formatKrxDate(date) {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Seoul',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    }).formatToParts(date);
+    const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+    return `${values.year}${values.month}${values.day}`;
+}
+
+function getRecentKrxDates(days = 14) {
+    const oneDayMs = 24 * 60 * 60 * 1000;
+    return Array.from({ length: days }, (_, index) => formatKrxDate(new Date(Date.now() - index * oneDayMs)));
+}
+
+function pickGoldRow(rows) {
+    return rows.find(row => String(row.ISU_NM || '').includes('1Kg'))
+        || rows.find(row => String(row.ISU_NM || '').includes('금'))
+        || rows[0]
+        || null;
+}
+
+function isGoldQuery(value) {
+    const query = String(value || '').trim().toUpperCase().replace(/\s+/g, '');
+    return ['GOLD', 'KRX-GOLD', 'KRXGOLD', '금', '금현물', 'KRX금'].includes(query);
+}
+
+async function fetchKrxGoldQuote(env) {
+    const authKey = env?.KRX_AUTH_KEY;
+    if (!authKey) {
+        throw new Error('KRX_AUTH_KEY secret is not set.');
+    }
+
+    let lastError = '';
+    for (const basDd of getRecentKrxDates()) {
+        const url = new URL(`${KRX_API_BASE_URL}/gen/gold_bydd_trd`);
+        url.searchParams.set('basDd', basDd);
+        url.searchParams.set('AUTH_KEY', authKey);
+
+        const response = await fetch(url, {
+            headers: {
+                'Accept': 'application/json',
+                'AUTH_KEY': authKey
+            }
+        });
+
+        if (!response.ok) {
+            if (response.status === 401) {
+                throw new Error('KRX 인증 실패(401): KRX_AUTH_KEY 값이 틀렸거나, 금시장 일별매매정보 API 이용 승인이 아직 안 된 상태입니다.');
+            }
+            lastError = `${response.status} for ${basDd}`;
+            continue;
+        }
+
+        const data = await response.json();
+        const rows = data?.OutBlock_1 || [];
+        const row = pickGoldRow(rows);
+        if (!row) {
+            lastError = `empty result for ${basDd}`;
+            continue;
+        }
+
+        const price = parseNumber(row.TDD_CLSPRC || row.CLSPRC || row.CLS_PRC || row.PRICE);
+        if (!price) {
+            lastError = `missing close price for ${basDd}`;
+            continue;
+        }
+
+        return {
+            symbol: KRX_GOLD_SYMBOL,
+            name: row.ISU_NM || 'KRX 금현물',
+            price,
+            currency: 'KRW',
+            marketTime: `${basDd.slice(0, 4)}-${basDd.slice(4, 6)}-${basDd.slice(6, 8)}T06:30:00.000Z`
+        };
+    }
+
+    throw new Error(`KRX gold request failed: ${lastError || 'no recent trading data'}`);
 }
 
 async function fetchYahooChart(symbol) {
@@ -151,7 +250,7 @@ async function searchYahooSymbols(query) {
 }
 
 export default {
-    async fetch(request) {
+    async fetch(request, env) {
         if (request.method === 'OPTIONS') {
             return new Response(null, { headers: CORS_HEADERS });
         }
@@ -167,6 +266,19 @@ export default {
             }
 
             try {
+                if (isGoldQuery(query)) {
+                    return jsonResponse({
+                        success: true,
+                        query,
+                        results: [{
+                            symbol: KRX_GOLD_SYMBOL,
+                            name: 'KRX 금현물',
+                            exchange: 'KRX',
+                            type: 'Gold'
+                        }]
+                    });
+                }
+
                 return jsonResponse({
                     success: true,
                     query,
@@ -196,7 +308,20 @@ export default {
         }
 
         try {
-            const quoteRows = await fetchYahooCharts(symbols);
+            const goldSymbols = symbols.filter(symbol => symbol === KRX_GOLD_SYMBOL);
+            const yahooSymbols = symbols.filter(symbol => symbol !== KRX_GOLD_SYMBOL);
+            const quoteRows = {
+                ...(await fetchYahooCharts(yahooSymbols))
+            };
+
+            if (goldSymbols.length > 0) {
+                try {
+                    quoteRows[KRX_GOLD_SYMBOL] = await fetchKrxGoldQuote(env);
+                } catch (error) {
+                    quoteRows[KRX_GOLD_SYMBOL] = { error: error.message || 'Unknown KRX gold error' };
+                }
+            }
+
             const currencies = [...new Set(Object.values(quoteRows)
                 .map(row => row.currency)
                 .filter(currency => currency && currency !== 'KRW'))];
