@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>우리들의 커플 가계부</title>
+    <title>가계부</title>
     <!-- 스타일링을 위한 Bootstrap CDN -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- 아이콘 -->
@@ -15,130 +15,335 @@
     <!-- 모달 등 기능을 위한 Bootstrap JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <style>
+        /* ── Variables ── */
         :root {
-            --primary-color: #6c5ce7;
-            --secondary-color: #a29bfe;
-            --bg-color: #f0f2f5;
-            --card-bg: #ffffff;
-            --text-color: #2d3436;
+            --primary: #7c6ff7;
+            --primary-glow: rgba(124, 111, 247, 0.4);
+            --glass: rgba(255, 255, 255, 0.07);
+            --glass-border: rgba(255, 255, 255, 0.11);
+            --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+            --text: #eef0ff;
+            --text-sub: rgba(200, 205, 240, 0.65);
+            --radius: 18px;
         }
-        body { 
-            background-color: var(--bg-color); 
-            font-family: 'Noto Sans KR', sans-serif; 
-            color: var(--text-color);
+
+        /* ── Base ── */
+        *, *::before, *::after { box-sizing: border-box; }
+
+        body {
+            background: linear-gradient(135deg, #0d0b1e 0%, #1a1040 40%, #0e1628 100%);
+            min-height: 100vh;
+            font-family: 'Noto Sans KR', sans-serif;
+            color: var(--text);
+            overflow-x: hidden;
         }
+
+        /* Ambient glow blobs */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -250px; left: -200px;
+            width: 700px; height: 700px;
+            background: radial-gradient(circle, rgba(108,92,231,0.18) 0%, transparent 65%);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 0;
+            animation: blobFloat 12s ease-in-out infinite alternate;
+        }
+        body::after {
+            content: '';
+            position: fixed;
+            bottom: -300px; right: -200px;
+            width: 800px; height: 800px;
+            background: radial-gradient(circle, rgba(0,184,148,0.1) 0%, transparent 65%);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 0;
+            animation: blobFloat 15s ease-in-out infinite alternate-reverse;
+        }
+        @keyframes blobFloat {
+            from { transform: translate(0, 0) scale(1); }
+            to   { transform: translate(30px, 40px) scale(1.08); }
+        }
+
+        .container { position: relative; z-index: 1; }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.28); }
+
+        /* ── Navbar ── */
         .navbar {
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)) !important;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            background: rgba(10, 8, 30, 0.75) !important;
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border-bottom: 1px solid rgba(255,255,255,0.07);
+            box-shadow: 0 2px 24px rgba(0,0,0,0.4);
+            position: relative; z-index: 100;
         }
-        .card { 
-            border: none; 
-            border-radius: 20px; 
-            background-color: var(--card-bg);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.05); 
-            margin-bottom: 25px; 
-            transition: transform 0.2s;
+        .navbar-brand { font-weight: 700; letter-spacing: -0.3px; }
+
+        /* ── Glass card base ── */
+        .card {
+            background: var(--glass);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius);
+            box-shadow: var(--glass-shadow);
+            margin-bottom: 25px;
+            color: var(--text);
+            transition: transform 0.22s ease, box-shadow 0.22s ease;
         }
         .card:hover {
             transform: translateY(-5px);
+            box-shadow: 0 18px 44px rgba(0,0,0,0.55);
         }
-        .balance-card { 
-            background: linear-gradient(135deg, #0984e3, #74b9ff); 
-            color: white; 
+
+        /* ── Colored asset cards ── */
+        .balance-card {
+            background: linear-gradient(135deg, rgba(9,132,227,0.65), rgba(116,185,255,0.45)) !important;
+            border: 1px solid rgba(116,185,255,0.25) !important;
+            color: white !important;
         }
-        .stock-card { 
-            background: linear-gradient(135deg, #00b894, #55efc4); 
-            color: white; 
+        .stock-card {
+            background: linear-gradient(135deg, rgba(0,184,148,0.65), rgba(85,239,196,0.45)) !important;
+            border: 1px solid rgba(85,239,196,0.25) !important;
+            color: white !important;
         }
-        .savings-card { 
-            background: linear-gradient(135deg, #fdcb6e, #e17055); 
-            color: white; 
+        .savings-card {
+            background: linear-gradient(135deg, rgba(253,203,110,0.65), rgba(225,112,85,0.5)) !important;
+            border: 1px solid rgba(253,203,110,0.25) !important;
+            color: white !important;
         }
+
+        /* ── Goal banner ── */
+        .alert.alert-info {
+            background: rgba(108,92,231,0.13) !important;
+            border: 1px solid rgba(108,92,231,0.28) !important;
+            border-radius: var(--radius) !important;
+            color: var(--text) !important;
+            backdrop-filter: blur(12px);
+        }
+        #coupleGoalDisplay { color: #c4b5fd !important; }
+
+        /* ── Form controls ── */
         .form-control, .form-select {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.14);
             border-radius: 12px;
-            border: 1px solid #dfe6e9;
             padding: 12px;
+            color: var(--text);
+            transition: border-color 0.2s, box-shadow 0.2s;
         }
+        .form-control:focus, .form-select:focus {
+            background: rgba(255,255,255,0.11);
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-glow);
+            color: var(--text);
+            outline: none;
+        }
+        .form-control::placeholder { color: var(--text-sub); }
+        .form-select option { background: #1a1040; color: var(--text); }
+        .form-label, label.small, label.form-label { color: var(--text-sub) !important; }
+
+        /* Input group */
+        .input-group-text {
+            background: rgba(255,255,255,0.08);
+            border-color: rgba(255,255,255,0.14);
+            color: var(--text);
+        }
+
+        /* ── Buttons ── */
         .btn {
             border-radius: 12px;
             padding: 10px 20px;
             font-weight: 500;
-        }
-        .btn-primary {
-            background-color: var(--primary-color);
-            border: none;
-        }
-        .btn-primary:hover {
-            background-color: #5849be;
-        }
-        .calendar-day { 
-            height: 120px; 
-            border-radius: 15px;
-            background-color: #fff;
-            border: 1px solid #f1f2f6; 
-            position: relative; 
-            cursor: pointer;
             transition: all 0.2s;
         }
-        .calendar-day:hover { background-color: #e9ecef !important; }
-        .calendar-day.selected { 
-            border: 2px solid var(--primary-color); 
-            background-color: #eef2ff !important; 
-            transform: scale(0.98);
+        .btn-primary {
+            background: linear-gradient(135deg, #7c6ff7, #5f51d8);
+            border: none;
+            box-shadow: 0 4px 18px rgba(108,92,231,0.45);
         }
-        .calendar-day .date { position: absolute; top: 10px; left: 15px; font-weight: 700; }
-        .calendar-day .amount { position: absolute; bottom: 10px; right: 15px; font-size: 0.85rem; font-weight: 600; }
-        .expense-text { color: #d63031; }
-        .income-text { color: #00b894; }
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #8b7ff8, #7063ea);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(108,92,231,0.65);
+        }
+        .btn-secondary {
+            background: rgba(255,255,255,0.09);
+            border: 1px solid rgba(255,255,255,0.18);
+            color: var(--text);
+        }
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.15);
+            color: white;
+        }
+        .btn-warning {
+            background: linear-gradient(135deg, #fdcb6e, #e17055);
+            border: none;
+            color: white;
+        }
+        .btn-warning:hover { filter: brightness(1.1); transform: translateY(-1px); color: white; }
+        .btn-success { background: linear-gradient(135deg, #00b894, #00cec9); border: none; }
+        .btn-success:hover { filter: brightness(1.1); transform: translateY(-1px); }
+        .btn-danger  { background: linear-gradient(135deg, #e17055, #d63031); border: none; }
+
+        /* Outline variants → ghost style */
+        .btn-outline-secondary, .btn-outline-light, .btn-outline-primary,
+        .btn-outline-success, .btn-outline-warning, .btn-outline-danger,
+        .btn-outline-info {
+            color: rgba(255,255,255,0.75);
+            border-color: rgba(255,255,255,0.2);
+            background: transparent;
+        }
+        .btn-outline-secondary:hover, .btn-outline-light:hover {
+            background: rgba(255,255,255,0.1); color: white; border-color: rgba(255,255,255,0.35);
+        }
+        .btn-outline-primary:hover {
+            background: rgba(124,111,247,0.18); color: #a29bfe; border-color: #a29bfe;
+        }
+        .btn-outline-success:hover {
+            background: rgba(0,184,148,0.18); color: #55efc4; border-color: #55efc4;
+        }
+        .btn-outline-warning:hover {
+            background: rgba(253,203,110,0.18); color: #fdcb6e; border-color: #fdcb6e;
+        }
+        .btn-outline-danger:hover {
+            background: rgba(214,48,49,0.18); color: #ff7675; border-color: #ff7675;
+        }
+        .btn-outline-info:hover {
+            background: rgba(116,185,255,0.18); color: #74b9ff; border-color: #74b9ff;
+        }
+        .btn-close { filter: invert(1) brightness(0.7); }
+
+        /* btn-check (asset type radio) */
+        .btn-check:checked + .btn-outline-secondary {
+            background: rgba(255,255,255,0.15); color: white; border-color: rgba(255,255,255,0.4);
+        }
+        .btn-check:checked + .btn-outline-success {
+            background: rgba(0,184,148,0.22); color: #55efc4; border-color: #55efc4;
+        }
+        .btn-check:checked + .btn-outline-warning {
+            background: rgba(253,203,110,0.22); color: #fdcb6e; border-color: #fdcb6e;
+        }
+
+        /* ── Calendar ── */
         .calendar-grid {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
             gap: 5px;
         }
-        .account-list-item {
-            gap: 12px;
+        .calendar-day {
+            height: 120px;
+            border-radius: 14px;
+            background: rgba(255,255,255,0.04) !important;
+            border: 1px solid rgba(255,255,255,0.07) !important;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.2s;
         }
+        .calendar-day:hover {
+            background: rgba(255,255,255,0.1) !important;
+            border-color: rgba(255,255,255,0.18) !important;
+        }
+        .calendar-day.selected {
+            border: 2px solid var(--primary) !important;
+            background: rgba(108,92,231,0.15) !important;
+            box-shadow: 0 0 22px rgba(108,92,231,0.35);
+            transform: scale(0.97);
+        }
+        .calendar-day .date { position: absolute; top: 10px; left: 13px; font-weight: 700; }
+        .calendar-day .amount { position: absolute; bottom: 10px; right: 11px; font-size: 0.82rem; font-weight: 600; }
+        .expense-text { color: #ff7675; }
+        .income-text  { color: #55efc4; }
+
+        /* ── Table ── */
+        .table {
+            --bs-table-bg: transparent;
+            --bs-table-color: var(--text);
+            --bs-table-border-color: rgba(255,255,255,0.07);
+            --bs-table-hover-bg: rgba(255,255,255,0.06);
+            --bs-table-hover-color: var(--text);
+            --bs-table-striped-bg: rgba(255,255,255,0.03);
+            color: var(--text);
+        }
+        .table thead th {
+            background: rgba(255,255,255,0.05);
+            border-color: rgba(255,255,255,0.1);
+            color: var(--text-sub);
+            font-weight: 500;
+            letter-spacing: 0.03em;
+        }
+        .table td, .table th { border-color: rgba(255,255,255,0.05); vertical-align: middle; }
+        .table > :not(caption) > * > * { background-color: transparent; }
+
+        /* ── Badges ── */
+        .badge.bg-light {
+            background: rgba(255,255,255,0.15) !important;
+            color: rgba(255,255,255,0.9) !important;
+        }
+
+        /* ── List group ── */
+        .list-group-item {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.08);
+            color: var(--text);
+        }
+        .list-group-item + .list-group-item { border-top-color: rgba(255,255,255,0.06); }
+
+        /* ── Progress ── */
+        .progress {
+            background: rgba(255,255,255,0.08);
+            border-radius: 10px;
+            height: 20px;
+        }
+        .progress-bar.bg-info    { background: linear-gradient(90deg, #6c5ce7, #74b9ff) !important; }
+        .progress-bar.bg-warning { background: linear-gradient(90deg, #fdcb6e, #e17055) !important; }
+        .progress-bar.bg-danger  { background: linear-gradient(90deg, #e17055, #d63031) !important; }
+
+        /* ── Modals ── */
+        .modal-content {
+            background: rgba(15, 10, 40, 0.92);
+            backdrop-filter: blur(32px);
+            -webkit-backdrop-filter: blur(32px);
+            border: 1px solid rgba(255,255,255,0.11);
+            border-radius: 20px;
+            color: var(--text);
+            box-shadow: 0 24px 64px rgba(0,0,0,0.7);
+        }
+        .modal-header { border-bottom: 1px solid rgba(255,255,255,0.09); }
+        .modal-footer { border-top:   1px solid rgba(255,255,255,0.09); }
+
+        /* ── Text & utility overrides ── */
+        .text-muted   { color: var(--text-sub) !important; }
+        .text-secondary { color: rgba(180,185,230,0.7) !important; }
+        .text-danger  { color: #ff7675 !important; }
+        .text-success { color: #55efc4 !important; }
+        .text-primary { color: #a29bfe !important; }
+        .text-dark    { color: var(--text)  !important; }
+        .bg-light     { background: rgba(255,255,255,0.06) !important; }
+        .border       { border-color: rgba(255,255,255,0.12) !important; }
+        hr            { border-color: rgba(255,255,255,0.09); }
+
+        /* ── Layout helpers ── */
+        .account-list-item { gap: 12px; }
         .account-actions {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: flex-end;
-            gap: 6px;
-            min-width: 260px;
+            display: flex; flex-wrap: wrap;
+            justify-content: flex-end; gap: 6px; min-width: 260px;
         }
-        .account-actions .btn {
-            margin: 0 !important;
-            white-space: nowrap;
-        }
-        .asset-ticker-row {
-            display: flex !important;
-            flex-wrap: nowrap !important;
-            gap: 8px;
-            width: 100%;
-        }
-        .asset-ticker-field {
-            flex: 1 1 0;
-            min-width: 0;
-        }
-        .asset-ticker-button {
-            flex: 0 0 120px;
-            min-width: 120px;
-        }
-        .asset-ticker-button .btn {
-            width: 100%;
-            padding-left: 10px;
-            padding-right: 10px;
-            white-space: nowrap;
-        }
+        .account-actions .btn { margin: 0 !important; white-space: nowrap; }
+        .asset-ticker-row   { display: flex !important; flex-wrap: nowrap !important; gap: 8px; width: 100%; }
+        .asset-ticker-field { flex: 1 1 0; min-width: 0; }
+        .asset-ticker-button { flex: 0 0 120px; min-width: 120px; }
+        .asset-ticker-button .btn { width: 100%; padding-left: 10px; padding-right: 10px; white-space: nowrap; }
+
         @media (max-width: 576px) {
-            .account-list-item {
-                align-items: flex-start !important;
-                flex-direction: column;
-            }
-            .account-actions {
-                justify-content: flex-start;
-                min-width: 0;
-                width: 100%;
-            }
+            .account-list-item { align-items: flex-start !important; flex-direction: column; }
+            .account-actions   { justify-content: flex-start; min-width: 0; width: 100%; }
         }
     </style>
 </head>
@@ -275,18 +480,12 @@
                 </div>
             </div>
 
-            <div class="col-12" id="normalAssetArea">
-                <label class="form-label small text-muted mb-1">자산 표시 태그 (총자산에는 직접 반영되지 않음)</label>
-                <div class="btn-group w-100" role="group">
-                    <input type="radio" class="btn-check" name="assetType" id="assetNone" value="none" checked onchange="toggleAccountSelect()">
-                    <label class="btn btn-outline-secondary" for="assetNone">태그 없음</label>
-                    <input type="radio" class="btn-check" name="assetType" id="assetStock" value="stock" onchange="toggleAccountSelect()">
-                    <label class="btn btn-outline-success" for="assetStock">주식/투자</label>
-                    <input type="radio" class="btn-check" name="assetType" id="assetSavings" value="savings" onchange="toggleAccountSelect()">
-                    <label class="btn btn-outline-warning" for="assetSavings">예적금</label>
-                </div>
-                <div class="mt-2" id="accountSelectWrapper" style="display: none;">
-                    <select class="form-select" id="targetAccount"></select>
+            <div class="col-12 d-flex justify-content-center" id="excludeBudgetArea">
+                <div class="form-check" style="padding: 6px 14px; background: rgba(255,255,255,0.05); border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); display: inline-flex; align-items: center; gap: 8px;">
+                    <input class="form-check-input mt-0" type="checkbox" id="excludeFromBudget">
+                    <label class="form-check-label text-muted small" for="excludeFromBudget" style="font-size: 0.82rem;">
+                        월수입 배분 잔액에서 제외
+                    </label>
                 </div>
             </div>
             <div class="col-12">
@@ -297,17 +496,21 @@
     </div>
 
     <!-- 3. 차트 리포트 -->
-    <div class="row">
+    <div class="row mb-4">
         <div class="col-md-6">
-            <div class="card p-3">
+            <div class="card p-3 h-100">
                 <h5>📊 이번 달 지출/수입 추이</h5>
-                <canvas id="barChart"></canvas>
+                <div style="position:relative; height:350px;">
+                    <canvas id="barChart"></canvas>
+                </div>
             </div>
         </div>
         <div class="col-md-6">
-            <div class="card p-3">
+            <div class="card p-3 h-100">
                 <h5>🍕 카테고리별 지출 <small class="text-muted" style="font-size:0.7em;">클릭하면 내역 확인</small></h5>
-                <canvas id="pieChart" style="cursor:pointer;"></canvas>
+                <div style="position:relative; height:350px;">
+                    <canvas id="pieChart" style="cursor:pointer;"></canvas>
+                </div>
             </div>
         </div>
     </div>
@@ -330,8 +533,8 @@
                 <!-- 예산 바 -->
                 <div class="mb-4">
                     <div class="d-flex justify-content-between small mb-1">
-                        <span id="budgetStatusText" class="fw-bold text-secondary">예산 미설정</span>
-                        <a href="#" onclick="editBudget()" class="text-decoration-none">⚙️ 예산 설정</a>
+                        <span id="budgetStatusText" class="fw-bold text-secondary">수입 내역을 입력하면 자동으로 예산이 설정돼요</span>
+                        <span class="text-muted" style="font-size:0.8em;">이달 수입 기준 자동</span>
                     </div>
                     <div class="progress" style="height: 20px;">
                         <div id="budgetProgressBar" class="progress-bar bg-info" role="progressbar" style="width: 0%"></div>
@@ -1439,16 +1642,15 @@
         const category = document.getElementById('category').value;
         const type = document.getElementById('type').value;
         const investArea = document.getElementById('investmentInputArea');
-        const normalArea = document.getElementById('normalAssetArea');
+        const excludeArea = document.getElementById('excludeBudgetArea');
 
-        // 카테고리가 '투자'이고 지출일 때만 활성화
         if (category === '투자' && type === 'expense') {
             investArea.style.display = 'block';
-            normalArea.style.display = 'none';
+            excludeArea.style.display = 'none';
             updateInvestmentSelects();
         } else {
             investArea.style.display = 'none';
-            normalArea.style.display = 'block';
+            excludeArea.style.display = type === 'expense' ? 'block' : 'none';
         }
     }
 
@@ -1591,13 +1793,7 @@
         }
 
         // 2. 일반 지출/수입 로직
-        const assetType = document.querySelector('input[name="assetType"]:checked').value;
-        const accountId = assetType !== 'none' ? parseInt(document.getElementById('targetAccount').value) : null;
-
-        if (assetType !== 'none' && !accountId) {
-            alert("표시할 계좌를 선택하거나 계좌를 먼저 등록해주세요.");
-            return;
-        }
+        const excludeFromBudget = type === 'expense' && document.getElementById('excludeFromBudget').checked;
 
         const newTransaction = {
             id: Date.now(),
@@ -1606,21 +1802,20 @@
             category: document.getElementById('category').value,
             amount: amount,
             desc: desc,
-            assetType: assetType,
-            accountId: accountId
+            excludeFromBudget: excludeFromBudget
         };
 
         transactions.push(newTransaction);
         saveData();
         renderAll();
-        
+
         if (editingId) {
-            cancelEdit(); // 수정 모드 종료 및 UI 초기화
+            cancelEdit();
             alert("수정되었습니다.");
         } else {
-            toggleAccountSelect();
             e.target.reset();
             document.getElementById('date').valueAsDate = new Date();
+            document.getElementById('excludeFromBudget').checked = false;
         }
     });
 
@@ -1693,13 +1888,8 @@
         const sorted = [...data].sort((a, b) => new Date(b.date) - new Date(a.date));
         
         sorted.forEach(t => {
-            // 기존 데이터 호환성 처리
-            const aType = t.assetType || (t.isInvestment ? 'stock' : 'none');
-            const accName = t.accountId ? (accounts.find(a => a.id === t.accountId)?.name || '') : '';
-            
             let badge = '';
-            if (aType === 'stock') badge = `<span class="badge bg-success ms-1">📈 ${accName || '주식'}</span>`;
-            else if (aType === 'savings') badge = `<span class="badge bg-warning text-dark ms-1">🏦 ${accName || '예적금'}</span>`;
+            if (t.excludeFromBudget) badge = '<span class="badge bg-secondary ms-1">배분제외</span>';
             
             const row = `
                 <tr>
@@ -1776,19 +1966,25 @@
         document.getElementById('monthIncome').innerText = monthIncome.toLocaleString() + "원";
         document.getElementById('monthExpense').innerText = monthExpense.toLocaleString() + "원";
 
-        // 예산 업데이트
-        const key = getMonthKey(currentDate);
-        const budget = monthlyBudgets[key] || 0;
+        // 예산 업데이트 (수입 - 배분제외 항목 = 월수입 배분 잔액)
+        const excludedExpenses = currentData
+            .filter(t => t.type === 'expense' && t.excludeFromBudget && t.category !== '투자손익')
+            .reduce((sum, t) => sum + (parseInt(t.amount) || 0), 0);
+        const realBudget = monthIncome - excludedExpenses;
+        const realExpense = monthExpense - excludedExpenses;
+
         const budgetText = document.getElementById('budgetStatusText');
         const progressBar = document.getElementById('budgetProgressBar');
 
-        if (budget > 0) {
-            const percent = Math.min(100, Math.round((monthExpense / budget) * 100));
-            budgetText.innerText = `예산: ${budget.toLocaleString()}원 중 ${monthExpense.toLocaleString()}원 사용 (${percent}%)`;
+        if (monthIncome > 0) {
+            const percent = Math.min(100, Math.round((realExpense / realBudget) * 100));
+            const remaining = realBudget - realExpense;
+            const excludedText = excludedExpenses > 0 ? ` | 총지출 ${monthExpense.toLocaleString()}원 (배분제외 ${excludedExpenses.toLocaleString()}원 포함)` : '';
+            budgetText.innerText = `배분 잔액 ${realBudget.toLocaleString()}원 중 ${realExpense.toLocaleString()}원 지출 · 잔여 ${remaining.toLocaleString()}원 (${percent}%)${excludedText}`;
             progressBar.style.width = `${percent}%`;
-            progressBar.className = `progress-bar ${percent > 90 ? 'bg-danger' : (percent > 50 ? 'bg-warning' : 'bg-info')}`;
+            progressBar.className = `progress-bar ${percent > 90 ? 'bg-danger' : (percent > 60 ? 'bg-warning' : 'bg-info')}`;
         } else {
-            budgetText.innerText = '예산 미설정';
+            budgetText.innerText = '수입 내역을 입력하면 자동으로 배분 잔액이 계산돼요';
             progressBar.style.width = '0%';
             progressBar.className = 'progress-bar bg-info';
         }
@@ -1829,6 +2025,7 @@
                 }]
             },
             options: {
+                maintainAspectRatio: false,
                 onClick: (event, elements) => {
                     if (elements.length > 0) {
                         const idx = elements[0].index;
@@ -1839,30 +2036,115 @@
             }
         });
 
-        // 바 차트도 투자손익 제외
-        const totalIncome = filteredData
-            .filter(t => t.type === 'income')
-            .reduce((acc, cur) => acc + (parseInt(cur.amount) || 0), 0);
+        // 일별 누적 지출 라인 차트 (수입 기준 예산선 포함)
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const today = new Date();
+        const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month;
+        const lastFilledDay = isCurrentMonth ? today.getDate() : daysInMonth;
 
-        const totalExpense = filteredData
-            .filter(t => t.type === 'expense')
-            .reduce((acc, cur) => acc + (parseInt(cur.amount) || 0), 0);
+        const monthIncome = filteredData
+            .filter(t => t.type === 'income')
+            .reduce((sum, t) => sum + (parseInt(t.amount) || 0), 0);
+
+        const excludedExpenses = filteredData
+            .filter(t => t.type === 'expense' && t.excludeFromBudget)
+            .reduce((sum, t) => sum + (parseInt(t.amount) || 0), 0);
+        const realBudget = monthIncome - excludedExpenses;
+
+        // 일별 누적 계산 (생활비 / 총지출 두 가지)
+        const cumulativeExpense = [];
+        const cumulativeTotalExpense = [];
+        let cumSum = 0;
+        let cumTotalSum = 0;
+        for (let d = 1; d <= daysInMonth; d++) {
+            const dayStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+            const dayExpenses = filteredData.filter(t => t.type === 'expense' && t.date === dayStr);
+            const dayLiving = dayExpenses.filter(t => !t.excludeFromBudget).reduce((s, t) => s + (parseInt(t.amount) || 0), 0);
+            const dayTotal = dayExpenses.reduce((s, t) => s + (parseInt(t.amount) || 0), 0);
+            cumSum += dayLiving;
+            cumTotalSum += dayTotal;
+            cumulativeExpense.push(d <= lastFilledDay ? cumSum : null);
+            cumulativeTotalExpense.push(d <= lastFilledDay ? cumTotalSum : null);
+        }
+
+        const labels = Array.from({ length: daysInMonth }, (_, i) => `${i + 1}일`);
+
+        const chartDatasets = [
+            {
+                label: '생활비 누적',
+                data: cumulativeExpense,
+                borderColor: '#ff7675',
+                backgroundColor: 'rgba(255, 118, 117, 0.12)',
+                fill: true,
+                tension: 0,
+                pointRadius: 3,
+                pointHoverRadius: 6,
+                spanGaps: false
+            },
+            {
+                label: '총 지출 누적',
+                data: cumulativeTotalExpense,
+                borderColor: '#fdcb6e',
+                backgroundColor: 'transparent',
+                fill: false,
+                tension: 0,
+                pointRadius: 3,
+                pointHoverRadius: 6,
+                borderDash: [4, 3],
+                spanGaps: false
+            }
+        ];
+
+        if (realBudget > 0) {
+            chartDatasets.push({
+                label: `배분 잔액 (${realBudget.toLocaleString()}원)`,
+                data: Array(daysInMonth).fill(realBudget),
+                borderColor: '#55efc4',
+                borderDash: [6, 4],
+                borderWidth: 2,
+                pointRadius: 0,
+                fill: false,
+                tension: 0
+            });
+        }
 
         const ctxBar = document.getElementById('barChart').getContext('2d');
         if (barChartInstance) barChartInstance.destroy();
         barChartInstance = new Chart(ctxBar, {
-            type: 'bar',
-            data: {
-                labels: ['수입', '지출'],
-                datasets: [{
-                    label: '금액',
-                    data: [totalIncome, totalExpense],
-                    backgroundColor: ['#198754', '#dc3545']
-                }]
-            },
+            type: 'line',
+            data: { labels, datasets: chartDatasets },
             options: {
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
                 scales: {
-                    y: { beginAtZero: true }
+                    x: {
+                        ticks: {
+                            color: 'rgba(200,205,240,0.65)',
+                            maxTicksLimit: 16,
+                            font: { size: 11 }
+                        },
+                        grid: { color: 'rgba(255,255,255,0.05)' }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            color: 'rgba(200,205,240,0.65)',
+                            callback: v => v >= 10000 ? `${Math.round(v / 10000)}만` : v.toLocaleString()
+                        },
+                        grid: { color: 'rgba(255,255,255,0.06)' }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: { color: 'rgba(200,205,240,0.85)', boxWidth: 14 }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => `${ctx.dataset.label}: ${(ctx.raw ?? 0).toLocaleString()}원`
+                        }
+                    }
                 }
             }
         });
@@ -2189,13 +2471,14 @@
 
         // 날짜 채우기
         for(let d=1; d<=lastDate; d++) {
-            // 해당 날짜의 지출 합계 계산
             const dateStr = `${year}-${String(month+1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-            const dayExpense = data
-                .filter(t => t.date === dateStr && t.type === 'expense')
-                .reduce((acc, cur) => acc + cur.amount, 0);
+            const dayTransactions = data.filter(t => t.date === dateStr);
+            const dayExpense = dayTransactions.filter(t => t.type === 'expense').reduce((acc, cur) => acc + cur.amount, 0);
+            const dayIncome  = dayTransactions.filter(t => t.type === 'income').reduce((acc, cur) => acc + cur.amount, 0);
 
-            let expenseHtml = dayExpense > 0 ? `<div class="amount expense-text">-${(dayExpense/10000).toFixed(1)}만</div>` : '';
+            const fmt = v => v >= 10000 ? `${(v/10000).toFixed(1)}만` : v.toLocaleString();
+            const incomeHtml  = dayIncome  > 0 ? `<div style="position:absolute; top:28px; left:8px; font-size:0.75rem; font-weight:600;" class="income-text">+${fmt(dayIncome)}</div>` : '';
+            const expenseHtml = dayExpense > 0 ? `<div class="amount expense-text">-${fmt(dayExpense)}</div>` : '';
 
             // 요일 색상 (일: 빨강, 토: 파랑)
             const dayOfWeek = new Date(year, month, d).getDay();
@@ -2208,6 +2491,7 @@
             grid.innerHTML += `
                 <div class="calendar-day bg-white ${isSelected}" onclick="selectDate('${dateStr}')">
                     <span class="date ${dateColor}">${d}</span>
+                    ${incomeHtml}
                     ${expenseHtml}
                 </div>
             `;
@@ -2250,17 +2534,9 @@
         document.getElementById('amount').value = t.amount;
         document.getElementById('desc').value = t.desc;
 
-        // 자산 표시 태그 상태 복구
-        const aType = t.assetType || 'none';
-        if (aType === 'stock') document.getElementById('assetStock').checked = true;
-        else if (aType === 'savings') document.getElementById('assetSavings').checked = true;
-        else document.getElementById('assetNone').checked = true;
-
-        toggleAccountSelect(); // 셀렉트 박스 갱신
-
-        if (t.accountId) {
-            document.getElementById('targetAccount').value = t.accountId;
-        }
+        // 배분제외 체크박스 복구
+        document.getElementById('excludeFromBudget').checked = !!t.excludeFromBudget;
+        toggleInvestmentInputs();
 
         // 수정 모드 활성화
         editingId = id;
@@ -2282,10 +2558,8 @@
         saveBtn.innerText = "저장하기";
         saveBtn.className = "btn btn-primary w-100";
         document.getElementById('cancelEditBtn').style.display = 'none';
-        
-        // 자산 표시 태그 초기화
-        document.getElementById('assetNone').checked = true;
-        toggleAccountSelect();
+        document.getElementById('excludeFromBudget').checked = false;
+        toggleInvestmentInputs();
     }
 </script>
 </body>
