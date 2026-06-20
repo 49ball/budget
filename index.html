@@ -191,6 +191,20 @@
                     </div>
                     <small id="stockAccountCount">* 등록된 계좌: 0개</small>
                     <br><small id="priceUpdateStatus">시세 업데이트 전</small>
+                    <div id="investReturnInfo" style="display:none; margin-top:8px; border-top:1px solid rgba(255,255,255,0.4); padding-top:8px;">
+                        <div class="d-flex justify-content-between" style="font-size:0.82rem;">
+                            <span>원금</span>
+                            <span id="investPrincipal">0원</span>
+                        </div>
+                        <div class="d-flex justify-content-between" style="font-size:0.82rem;">
+                            <span>평가손익</span>
+                            <span id="investProfit">0원</span>
+                        </div>
+                        <div class="d-flex justify-content-between fw-bold" style="font-size:0.88rem; margin-top:2px;">
+                            <span>수익률</span>
+                            <span id="investReturnRate">0%</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -292,8 +306,8 @@
         </div>
         <div class="col-md-6">
             <div class="card p-3">
-                <h5>🍕 카테고리별 지출</h5>
-                <canvas id="pieChart"></canvas>
+                <h5>🍕 카테고리별 지출 <small class="text-muted" style="font-size:0.7em;">클릭하면 내역 확인</small></h5>
+                <canvas id="pieChart" style="cursor:pointer;"></canvas>
             </div>
         </div>
     </div>
@@ -506,6 +520,21 @@
                     <small class="text-muted">잘못 기록한 달은 삭제할 수 있어요</small>
                 </div>
                 <div id="monthlyAssetRecordList" class="list-group small"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 카테고리별 지출 내역 모달 -->
+<div class="modal fade" id="categoryDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="categoryDetailTitle">카테고리 지출 내역</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="categoryDetailContent"></div>
             </div>
         </div>
     </div>
@@ -1710,6 +1739,30 @@
         document.getElementById('savingsAccountCount').innerText =
             `* 등록된 계좌: ${accounts.filter(a => a.type === 'savings').length}개`;
 
+        // 투자 원금 대비 수익률 계산
+        const investAccounts = accounts.filter(a =>
+            a.type === 'stock' && a.detailType === 'asset' &&
+            parseFloat(a.avgPrice) > 0 && parseFloat(a.quantity) > 0
+        );
+        const totalPrincipal = investAccounts.reduce((sum, a) => sum + Math.round(parseFloat(a.avgPrice) * parseFloat(a.quantity)), 0);
+        const totalInvestValue = investAccounts.reduce((sum, a) => sum + (parseInt(a.balance) || 0), 0);
+        const totalProfit = totalInvestValue - totalPrincipal;
+        const returnRate = totalPrincipal > 0 ? (totalProfit / totalPrincipal) * 100 : 0;
+
+        const returnInfoEl = document.getElementById('investReturnInfo');
+        if (totalPrincipal > 0) {
+            returnInfoEl.style.display = 'block';
+            document.getElementById('investPrincipal').innerText = totalPrincipal.toLocaleString() + '원';
+            const profitEl = document.getElementById('investProfit');
+            profitEl.innerText = (totalProfit >= 0 ? '+' : '') + Math.round(totalProfit).toLocaleString() + '원';
+            profitEl.style.color = totalProfit >= 0 ? '#ffeaa7' : '#74b9ff';
+            const rateEl = document.getElementById('investReturnRate');
+            rateEl.innerText = (returnRate >= 0 ? '+' : '') + returnRate.toFixed(2) + '%';
+            rateEl.style.color = returnRate >= 0 ? '#ffeaa7' : '#74b9ff';
+        } else {
+            returnInfoEl.style.display = 'none';
+        }
+
         // 월별 요약
         // 추가: '투자손익' 카테고리는 월 수입/지출에서도 제외
         const monthIncome = currentData
@@ -1746,18 +1799,22 @@
     let pieChartInstance = null;
     let yearlyChartInstance = null;
     let assetTrendChartInstance = null;
+    let categoryDetailModal = null;
+    let pieChartCategoryData = {}; // 클릭 시 참조용
 
     function renderCharts(data) {
         // 투자손익 제외한 데이터
         const filteredData = data.filter(t => t.category !== '투자손익');
 
         // 파이 차트용 지출 카테고리 집계
-        const categories = {};
+        const categoryExpenses = {};
         filteredData
             .filter(t => t.type === 'expense')
             .forEach(t => {
-                categories[t.category] = (categories[t.category] || 0) + t.amount;
+                categoryExpenses[t.category] = (categoryExpenses[t.category] || 0) + t.amount;
             });
+
+        pieChartCategoryData = categoryExpenses;
 
         // 파이 차트
         const ctxPie = document.getElementById('pieChart').getContext('2d');
@@ -1765,11 +1822,20 @@
         pieChartInstance = new Chart(ctxPie, {
             type: 'doughnut',
             data: {
-                labels: Object.keys(categories),
+                labels: Object.keys(categoryExpenses),
                 datasets: [{
-                    data: Object.values(categories),
+                    data: Object.values(categoryExpenses),
                     backgroundColor: ['#ff6384', '#36a2eb', '#ffce56', '#4bc0c0', '#9966ff', '#ff9f40']
                 }]
+            },
+            options: {
+                onClick: (event, elements) => {
+                    if (elements.length > 0) {
+                        const idx = elements[0].index;
+                        const catName = Object.keys(pieChartCategoryData)[idx];
+                        showCategoryDetail(catName, filteredData);
+                    }
+                }
             }
         });
 
@@ -1801,6 +1867,46 @@
             }
         });
     }
+    // 카테고리 지출 상세 모달
+    function showCategoryDetail(categoryName, data) {
+        const items = data
+            .filter(t => t.type === 'expense' && t.category === categoryName)
+            .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        const total = items.reduce((sum, t) => sum + t.amount, 0);
+
+        document.getElementById('categoryDetailTitle').innerText = `📂 ${categoryName} 지출 내역`;
+
+        let html = `
+            <div class="d-flex justify-content-between align-items-center mb-3 p-2 bg-light rounded">
+                <span class="text-muted">총 ${items.length}건</span>
+                <strong class="text-danger fs-6">${total.toLocaleString()}원</strong>
+            </div>`;
+
+        if (items.length === 0) {
+            html += '<p class="text-center text-muted py-3">이 달에 해당 카테고리 지출이 없습니다.</p>';
+        } else {
+            html += `<table class="table table-hover">
+                <thead><tr><th>날짜</th><th>내용</th><th class="text-end">금액</th></tr></thead>
+                <tbody>`;
+            items.forEach(t => {
+                html += `<tr>
+                    <td class="text-muted" style="white-space:nowrap;">${t.date}</td>
+                    <td>${t.desc || '-'}</td>
+                    <td class="text-danger text-end" style="white-space:nowrap;">-${t.amount.toLocaleString()}원</td>
+                </tr>`;
+            });
+            html += '</tbody></table>';
+        }
+
+        document.getElementById('categoryDetailContent').innerHTML = html;
+
+        if (!categoryDetailModal) {
+            categoryDetailModal = new bootstrap.Modal(document.getElementById('categoryDetailModal'));
+        }
+        categoryDetailModal.show();
+    }
+
     // 연간 리포트 기능
     const yearlyReportModal = new bootstrap.Modal(document.getElementById('yearlyReportModal'));
 
