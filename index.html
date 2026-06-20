@@ -353,6 +353,7 @@
     <div class="container">
         <a class="navbar-brand" href="#" id="appTitle" onclick="editTitle()" style="cursor: pointer;" title="클릭하여 이름 변경"><i class="bi bi-heart-fill text-danger"></i> 커플 가계부</a>
         <div>
+            <button class="btn btn-outline-light btn-sm me-2" onclick="openGuideModal()">📖 사용법</button>
             <button class="btn btn-outline-light btn-sm me-2" onclick="openFixedExpenseModal()">🔄 고정지출 관리</button>
             <button class="btn btn-outline-warning btn-sm" onclick="openYearlyReport()">📅 연간 리포트</button>
             <button class="btn btn-outline-primary btn-sm" onclick="openAssetTrendReport()">📈 자산 변동</button>
@@ -441,7 +442,7 @@
             </div>
             <div class="col-md-3">
                 <div class="input-group">
-                    <select class="form-select" id="category" onchange="toggleInvestmentInputs()">
+                    <select class="form-select" id="category">
                         <!-- 자바스크립트로 채워짐 -->
                     </select>
                     <button class="btn btn-outline-secondary" type="button" onclick="openCategoryModal()" title="카테고리 관리">⚙️</button>
@@ -454,32 +455,6 @@
                 <input type="text" class="form-control" id="desc" placeholder="내용 (예: 데이트)">
             </div>
             
-            <!-- 투자 카테고리 전용 입력 필드 -->
-            <div class="col-12 bg-light p-3 rounded border" id="investmentInputArea" style="display: none;">
-                <h6 class="text-primary fw-bold"><i class="bi bi-graph-up-arrow"></i> 투자 상세 입력</h6>
-                <div class="row g-2">
-                    <div class="col-md-3">
-                        <label class="small text-muted">매수 종목(계좌)</label>
-                        <select class="form-select form-select-sm" id="investStockAccount"></select>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="small text-muted">매수 단가</label>
-                        <input type="number" class="form-control form-select-sm" id="investPrice" placeholder="1주당 가격">
-                    </div>
-                    <div class="col-md-2">
-                        <label class="small text-muted">매수 수량</label>
-                        <input type="number" class="form-control form-select-sm" id="investQty" placeholder="개수">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="small text-muted">남은 돈 넣을 예수금 계좌</label>
-                        <select class="form-select form-select-sm" id="investDepositAccount"></select>
-                    </div>
-                    <div class="col-12">
-                        <small class="text-danger" id="investCalcPreview">* 내용을 입력하면 계산 결과가 여기에 표시됩니다.</small>
-                    </div>
-                </div>
-            </div>
-
             <div class="col-12 d-flex justify-content-center" id="excludeBudgetArea">
                 <div class="form-check" style="padding: 6px 14px; background: rgba(255,255,255,0.05); border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); display: inline-flex; align-items: center; gap: 8px;">
                     <input class="form-check-input mt-0" type="checkbox" id="excludeFromBudget">
@@ -643,6 +618,76 @@
                     - <b>KRX 금:</b> KRX-GOLD, 수량은 보유 g 기준으로 입력<br>
                     - <b>원화 환산:</b> USD 주식은 시세 업데이트 시 환율을 함께 반영합니다.
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 사용법 모달 -->
+<div class="modal fade" id="guideModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">📖 가계부 사용법</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" style="font-size: 0.92rem; line-height: 1.7;">
+
+                <h6 class="fw-bold text-info mb-2">💸 수입 / 지출 기록</h6>
+                <ul class="mb-3">
+                    <li>상단 입력폼에서 <strong>날짜 · 유형 · 카테고리 · 금액 · 메모</strong>를 입력 후 추가하면 기록돼요.</li>
+                    <li>유형을 <strong>수입</strong>으로 선택하면 이달 총수입에 합산되고, 예산이 자동 계산돼요.</li>
+                    <li>기록된 내역을 클릭하면 수정 모드로 진입해요. 수정 후 저장하거나 취소 가능해요.</li>
+                </ul>
+
+                <h6 class="fw-bold text-warning mb-2">📊 월수입 배분 잔액</h6>
+                <ul class="mb-3">
+                    <li><strong>배분 잔액 = 이달 총 수입</strong> 그 자체예요.</li>
+                    <li>예산 진행바는 <strong>생활비</strong>(배분제외 항목 제외한 실제 지출)가 총 수입 대비해서 어느정도인지 보여줘요.</li>
+                </ul>
+
+                <h6 class="fw-bold text-secondary mb-2">🔖 월수입 배분 잔액에서 제외</h6>
+                <ul class="mb-3">
+                    <li>지출 입력 시 <strong>"월수입 배분 잔액에서 제외"</strong> 체크박스를 체크하면, 해당 항목은 생활비가 아닌 <strong>미리 빼둔 돈</strong>으로 처리돼요.</li>
+                    <li>예) 비상금 사용 등</li>
+                    <li>이 항목들은 목록에 <strong>"배분제외"</strong> 뱃지로 표시되고, 차트에서 <strong>생활비 누적</strong>에는 포함되지 않아요.</li>
+                    <li>단, <strong>총 지출 누적</strong> 선에는 포함돼요.</li>
+                </ul>
+
+                <h6 class="fw-bold text-success mb-2">📈 투자 기록</h6>
+                <ul class="mb-3">
+                    <li>투자 매수/매도는 상단 <strong>주식/투자 자산</strong> 카드를 클릭해서 계좌 관리 창에서 직접 수정해요.</li>
+                    <li>투자 지출을 가계부에 기록할 때는 카테고리 <strong>투자</strong>로 일반 지출로 기록하고, <strong>"월수입 배분 잔액에서 제외"</strong>에 체크해두면 생활비에서 빠져요.</li>
+                </ul>
+
+                <h6 class="fw-bold text-danger mb-2">🔄 고정지출 관리</h6>
+                <ul class="mb-3">
+                    <li>매달 반복되는 지출(통신비·넷플릭스 등)을 <strong>고정지출 관리</strong>에 등록해두면, 매달 해당 날짜에 자동으로 기록 여부를 물어봐요.</li>
+                    <li>설명, 금액, 매월 결제일을 입력해서 등록하세요.</li>
+                </ul>
+
+                <h6 class="fw-bold text-primary mb-2">📅 달력 / 차트</h6>
+                <ul class="mb-3">
+                    <li>달력에서 날짜별 <span class="text-success fw-bold">+수입</span> / <span class="text-danger fw-bold">-지출</span> 금액을 한눈에 볼 수 있어요.</li>
+                    <li>차트는 <strong>생활비 누적</strong>(빨강)과 <strong>총 지출 누적</strong>(노랑)을 일별로 보여주고, 초록 점선이 배분 잔액 기준선이에요.</li>
+                    <li>현재 날짜 이후 구간은 데이터가 없어서 점이 표시되지 않아요 (정상이에요).</li>
+                </ul>
+
+                <h6 class="fw-bold mb-2" style="color:#a29bfe;">🏦 자산 관리</h6>
+                <ul class="mb-3">
+                    <li><strong>주식/투자 자산</strong>, <strong>예적금 자산</strong> 카드를 클릭하면 각 계좌를 직접 관리할 수 있어요.</li>
+                    <li>시세 업데이트 버튼으로 주식·금 시세를 실시간 반영해요.</li>
+                </ul>
+
+                <h6 class="fw-bold mb-2">💾 백업 / 복원</h6>
+                <ul class="mb-0">
+                    <li><strong>백업 저장</strong>으로 JSON 파일에 모든 데이터를 저장하고, <strong>백업 불러오기</strong>로 복원할 수 있어요.</li>
+                    <li><strong>엑셀 저장</strong>으로 거래 내역을 CSV로 내보낼 수 있어요.</li>
+                </ul>
+
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
             </div>
         </div>
     </div>
@@ -1497,6 +1542,11 @@
     // 카테고리 관리 기능
     const categoryModal = new bootstrap.Modal(document.getElementById('categoryModal'));
     const fixedExpenseModal = new bootstrap.Modal(document.getElementById('fixedExpenseModal'));
+    const guideModal = new bootstrap.Modal(document.getElementById('guideModal'));
+
+    function openGuideModal() {
+        guideModal.show();
+    }
 
     function openCategoryModal() {
         renderCategoryListInModal();
@@ -1637,72 +1687,12 @@
         }
     }
 
-    // 투자 입력 필드 토글 및 로직
-    function toggleInvestmentInputs() {
-        const category = document.getElementById('category').value;
+    function updateExcludeArea() {
         const type = document.getElementById('type').value;
-        const investArea = document.getElementById('investmentInputArea');
-        const excludeArea = document.getElementById('excludeBudgetArea');
-
-        if (category === '투자' && type === 'expense') {
-            investArea.style.display = 'block';
-            excludeArea.style.display = 'none';
-            updateInvestmentSelects();
-        } else {
-            investArea.style.display = 'none';
-            excludeArea.style.display = type === 'expense' ? 'block' : 'none';
-        }
+        document.getElementById('excludeBudgetArea').style.display = type === 'expense' ? 'block' : 'none';
     }
 
-    // 투자 관련 셀렉트 박스 채우기
-    function updateInvestmentSelects() {
-        const stockSelect = document.getElementById('investStockAccount');
-        const depositSelect = document.getElementById('investDepositAccount');
-        
-        stockSelect.innerHTML = '<option value="">선택하세요</option>';
-        depositSelect.innerHTML = '<option value="">선택하세요</option>';
-
-        // 투자자산(주식) 계좌 필터링
-        accounts.filter(a => a.type === 'stock' && a.detailType === 'asset').forEach(acc => {
-            stockSelect.innerHTML += `<option value="${acc.id}">${acc.name}</option>`;
-        });
-
-        // 예수금 계좌 필터링
-        accounts.filter(a => a.type === 'stock' && a.detailType === 'deposit').forEach(acc => {
-            depositSelect.innerHTML += `<option value="${acc.id}">${acc.name} (잔액: ${acc.balance.toLocaleString()}원)</option>`;
-        });
-    }
-
-    // 지출 타입 변경 시에도 토글 체크
-    document.getElementById('type').addEventListener('change', toggleInvestmentInputs);
-
-    // 실시간 계산 미리보기
-    ['amount', 'investPrice', 'investQty'].forEach(id => {
-        document.getElementById(id).addEventListener('input', calculateInvestPreview);
-    });
-
-    function calculateInvestPreview() {
-        const totalAmount = parseInt(document.getElementById('amount').value) || 0;
-        const price = parseInt(document.getElementById('investPrice').value) || 0;
-        const qty = parseFloat(document.getElementById('investQty').value) || 0;
-        const preview = document.getElementById('investCalcPreview');
-
-        if (totalAmount > 0 && price > 0 && qty > 0) {
-            const stockCost = price * qty;
-            const depositAmount = totalAmount - stockCost;
-            
-            if (depositAmount < 0) {
-                preview.className = "text-danger";
-                preview.innerText = `⚠️ 오류: 주식 매수액(${stockCost.toLocaleString()}원)이 총 지출액보다 큽니다.`;
-            } else {
-                preview.className = "text-success";
-                preview.innerText = `✅ 주식 매수: ${stockCost.toLocaleString()}원 / 예수금 입금: ${depositAmount.toLocaleString()}원`;
-            }
-        } else {
-            preview.className = "text-muted";
-            preview.innerText = "* 내용을 입력하면 계산 결과가 여기에 표시됩니다.";
-        }
-    }
+    document.getElementById('type').addEventListener('change', updateExcludeArea);
 
     // 2. 폼 제출 처리
     document.getElementById('accountForm').addEventListener('submit', (e) => {
@@ -1718,81 +1708,7 @@
             deleteItem(editingId);
         }
 
-        // 1. 투자 카테고리 로직 (지출일 때)
-        if (category === '투자' && type === 'expense') {
-            const stockAccId = parseInt(document.getElementById('investStockAccount').value);
-            const depositAccId = parseInt(document.getElementById('investDepositAccount').value);
-            const price = parseInt(document.getElementById('investPrice').value);
-            const qty = parseFloat(document.getElementById('investQty').value);
-
-            if (!stockAccId || !depositAccId || !price || !qty) {
-                alert("투자 상세 정보를 모두 입력해주세요.");
-                return;
-            }
-
-            const stockCost = price * qty;
-            const depositAmount = amount - stockCost;
-
-            if (depositAmount < 0) {
-                alert("주식 매수 금액이 총 지출 금액보다 큽니다.");
-                return;
-            }
-
-            // 주식 계좌 업데이트 (평단가, 수량, 잔액)
-            const stockAcc = accounts.find(a => a.id === stockAccId);
-            if (stockAcc) {
-                const oldTotal = (stockAcc.avgPrice || 0) * (stockAcc.quantity || 0);
-                const newTotal = oldTotal + stockCost;
-                const newQty = (stockAcc.quantity || 0) + qty;
-                
-                stockAcc.quantity = newQty;
-                stockAcc.avgPrice = Math.floor(newTotal / newQty); // 평단가 갱신
-                stockAcc.balance = (parseInt(stockAcc.balance) || 0) + stockCost; // 수정: 숫자형으로 확실하게 변환 후 더하기
-            }
-
-            // 예수금 계좌 업데이트
-            const depositAcc = accounts.find(a => a.id === depositAccId);
-            if (depositAcc) {
-                depositAcc.balance += depositAmount;
-            }
-
-            // 내역 저장 (지출로 기록하되, 상세 내용에 정보 포함)
-            transactions.push({
-                id: Date.now(),
-                date: document.getElementById('date').value,
-                type: 'expense',
-                category: '투자',
-                amount: amount,
-                desc: `${desc} (매수: ${stockAcc.name} ${qty}주 / 예수금: ${depositAmount.toLocaleString()}원)`,
-                assetType: 'stock', // 자산 변동 그래프용
-                accountId: null,    // 단순 지출 처리 (이미 위에서 자산 직접 수정함)
-                // 수정: 삭제 시 롤백을 위한 상세 정보 저장
-                investInfo: {
-                    stockId: stockAccId,
-                    stockCost: stockCost,
-                    qty: qty,
-                    depositId: depositAccId,
-                    depositAmt: depositAmount
-                }
-            });
-
-            localStorage.setItem('couple_accounts', JSON.stringify(accounts));
-            saveData();
-            renderAll();
-            renderAccountList(); // 계좌 정보 갱신
-            
-            if (editingId) {
-                cancelEdit(); // 수정 모드 종료 및 UI 초기화
-                alert("수정되었습니다.");
-            } else {
-                e.target.reset();
-                document.getElementById('date').valueAsDate = new Date();
-                toggleInvestmentInputs(); // 입력창 초기화
-            }
-            return;
-        }
-
-        // 2. 일반 지출/수입 로직
+        // 일반 지출/수입 로직
         const excludeFromBudget = type === 'expense' && document.getElementById('excludeFromBudget').checked;
 
         const newTransaction = {
@@ -1828,31 +1744,6 @@
     function deleteItem(id) {
         const target = transactions.find(t => t.id === id);
         if (target) {
-            // 1. 투자 상세 내역이 있는 경우 (주식 매수 등) -> 롤백
-            if (target.investInfo) {
-                const info = target.investInfo;
-                
-                // 주식 계좌 롤백 (잔액 감소, 수량 감소)
-                const stockAcc = accounts.find(a => a.id === info.stockId);
-                if (stockAcc) {
-                    stockAcc.balance = (parseInt(stockAcc.balance) || 0) - info.stockCost;
-                    stockAcc.quantity = (parseFloat(stockAcc.quantity) || 0) - info.qty;
-                    // 평단가 재계산 (근사치)
-                    if (stockAcc.quantity > 0) {
-                        stockAcc.avgPrice = Math.floor(stockAcc.balance / stockAcc.quantity);
-                    } else {
-                        stockAcc.avgPrice = 0;
-                    }
-                }
-
-                // 예수금 계좌 롤백
-                const depositAcc = accounts.find(a => a.id === info.depositId);
-                if (depositAcc) {
-                    depositAcc.balance = (parseInt(depositAcc.balance) || 0) - info.depositAmt;
-                }
-                
-                localStorage.setItem('couple_accounts', JSON.stringify(accounts));
-            } 
             transactions = transactions.filter(t => t.id !== id);
             saveData();
             renderAll();
@@ -1966,11 +1857,11 @@
         document.getElementById('monthIncome').innerText = monthIncome.toLocaleString() + "원";
         document.getElementById('monthExpense').innerText = monthExpense.toLocaleString() + "원";
 
-        // 예산 업데이트 (수입 - 배분제외 항목 = 월수입 배분 잔액)
+        // 예산 업데이트 (배분 잔액 = 총 수입, 생활비 = 총지출 - 배분제외)
         const excludedExpenses = currentData
             .filter(t => t.type === 'expense' && t.excludeFromBudget && t.category !== '투자손익')
             .reduce((sum, t) => sum + (parseInt(t.amount) || 0), 0);
-        const realBudget = monthIncome - excludedExpenses;
+        const realBudget = monthIncome;
         const realExpense = monthExpense - excludedExpenses;
 
         const budgetText = document.getElementById('budgetStatusText');
@@ -1979,8 +1870,8 @@
         if (monthIncome > 0) {
             const percent = Math.min(100, Math.round((realExpense / realBudget) * 100));
             const remaining = realBudget - realExpense;
-            const excludedText = excludedExpenses > 0 ? ` | 총지출 ${monthExpense.toLocaleString()}원 (배분제외 ${excludedExpenses.toLocaleString()}원 포함)` : '';
-            budgetText.innerText = `배분 잔액 ${realBudget.toLocaleString()}원 중 ${realExpense.toLocaleString()}원 지출 · 잔여 ${remaining.toLocaleString()}원 (${percent}%)${excludedText}`;
+            const excludedText = excludedExpenses > 0 ? ` | 배분제외 ${excludedExpenses.toLocaleString()}원 별도` : '';
+            budgetText.innerText = `이달 수입 ${realBudget.toLocaleString()}원 중 생활비 ${realExpense.toLocaleString()}원 지출 · 잔여 ${remaining.toLocaleString()}원 (${percent}%)${excludedText}`;
             progressBar.style.width = `${percent}%`;
             progressBar.className = `progress-bar ${percent > 90 ? 'bg-danger' : (percent > 60 ? 'bg-warning' : 'bg-info')}`;
         } else {
@@ -2048,10 +1939,7 @@
             .filter(t => t.type === 'income')
             .reduce((sum, t) => sum + (parseInt(t.amount) || 0), 0);
 
-        const excludedExpenses = filteredData
-            .filter(t => t.type === 'expense' && t.excludeFromBudget)
-            .reduce((sum, t) => sum + (parseInt(t.amount) || 0), 0);
-        const realBudget = monthIncome - excludedExpenses;
+        const realBudget = monthIncome;
 
         // 일별 누적 계산 (생활비 / 총지출 두 가지)
         const cumulativeExpense = [];
@@ -2521,12 +2409,6 @@
         const t = transactions.find(x => x.id === id);
         if (!t) return;
         
-        // 복합 투자 내역(주식 매수 등)은 로직이 복잡하여 삭제 후 재입력 유도
-        if (t.investInfo) {
-            alert("주식 매수 등 복합 투자 내역은 수정할 수 없습니다.\n삭제 후 다시 입력해주세요.");
-            return;
-        }
-
         // 폼에 데이터 채우기
         document.getElementById('date').value = t.date;
         document.getElementById('type').value = t.type;
@@ -2536,7 +2418,7 @@
 
         // 배분제외 체크박스 복구
         document.getElementById('excludeFromBudget').checked = !!t.excludeFromBudget;
-        toggleInvestmentInputs();
+        updateExcludeArea();
 
         // 수정 모드 활성화
         editingId = id;
@@ -2559,7 +2441,7 @@
         saveBtn.className = "btn btn-primary w-100";
         document.getElementById('cancelEditBtn').style.display = 'none';
         document.getElementById('excludeFromBudget').checked = false;
-        toggleInvestmentInputs();
+        updateExcludeArea();
     }
 </script>
 </body>
