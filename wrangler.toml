@@ -1,5 +1,5 @@
 name = "budget-price-worker"
-main = "workers/price-worker.js"
+main = "workers/index.js"
 compatibility_date = "2026-04-30"
 compatibility_flags = ["nodejs_compat"]
 
