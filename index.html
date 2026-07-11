@@ -1667,14 +1667,16 @@
             
             fixedExpenses.forEach(item => {
                 const day = String(item.day).padStart(2, '0');
-                transactions.push({
+                const newFixedTransaction = {
                     id: Date.now() + Math.random(), // 유니크 ID 생성
                     date: `${year}-${month}-${day}`,
                     type: 'expense',
                     category: '고정', // 수정: 고정 지출은 '고정' 카테고리로 분류
                     amount: item.amount,
                     desc: `[고정] ${item.desc}`
-                });
+                };
+                transactions.push(newFixedTransaction);
+                pushNewTransaction(newFixedTransaction).catch(err => alert('서버 저장에 실패했습니다. 다시 시도해주세요.\n' + err.message));
             });
             saveData();
             renderAll();
@@ -1738,6 +1740,7 @@
 
         transactions.push(newTransaction);
         saveData();
+        pushNewTransaction(newTransaction).catch(err => alert('서버 저장에 실패했습니다. 다시 시도해주세요.\n' + err.message));
         renderAll();
 
         if (editingId) {
@@ -1801,6 +1804,7 @@
         if (target) {
             transactions = transactions.filter(t => t.id !== id);
             saveData();
+            pushDeleteTransaction(id).catch(err => alert('서버 삭제에 실패했습니다. 다시 시도해주세요.\n' + err.message));
             renderAll();
         }
     }
