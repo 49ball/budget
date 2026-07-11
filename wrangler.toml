@@ -1,3 +1,10 @@
 name = "budget-price-worker"
 main = "workers/price-worker.js"
 compatibility_date = "2026-04-30"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "budget-couple-db"
+database_id = "28befdf9-e870-4f8b-a2a1-6e6241db13f6"
+migrations_dir = "workers/migrations"
