@@ -808,7 +808,7 @@
     let priceApiUrl = localStorage.getItem('budget_price_api_url') || defaultPriceApiUrl;
     
     // 초기 실행
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
         // 기존 데이터 마이그레이션 (단순 금액 -> 계좌 시스템)
         const oldStock = parseInt(localStorage.getItem('couple_stock_asset'));
         const oldSavings = parseInt(localStorage.getItem('couple_savings_asset'));
@@ -826,7 +826,21 @@
         
         const today = new Date();
         document.getElementById('saveAssetMonth').value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
-        
+
+        try {
+            const book = await fetchOwnBook();
+            transactions = book.transactions;
+            accounts = book.settings.accounts;
+            categories = book.settings.categories;
+            monthlyBudgets = book.settings.monthlyBudgets;
+            fixedExpenses = book.settings.fixedExpenses;
+            monthlyGoals = book.settings.monthlyGoals;
+            monthlyAssetsData = book.settings.monthlyAssetsData;
+            appTitle = book.settings.title;
+        } catch (err) {
+            alert('온라인 데이터를 불러오지 못했습니다. 인터넷 연결을 확인해주세요.\n' + err.message);
+        }
+
         updateTitleUI();
         renderCategoryOptions();
         const lastPriceUpdate = localStorage.getItem('budget_last_price_update');
