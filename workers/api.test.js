@@ -27,7 +27,7 @@ function req(path, { method = 'GET', code, body } = {}) {
     return new Request(`https://example.com${path}`, {
         method,
         headers,
-        body: body ? JSON.stringify(body) : undefined
+        body: body !== undefined ? (typeof body === 'string' ? body : JSON.stringify(body)) : undefined
     });
 }
 
@@ -93,6 +93,17 @@ describe('POST /api/books/:memberId/transactions', () => {
         }), env);
         expect(res.status).toBe(403);
     });
+
+    it('잘못된 형식의 JSON 본문이면 400을 반환한다', async () => {
+        const res = await handleApiRequest(req('/api/books/m-jt/transactions', {
+            method: 'POST',
+            code: 'JT-CODE',
+            body: '{ invalid json'
+        }), env);
+        expect(res.status).toBe(400);
+        const data = await res.json();
+        expect(data.success).toBe(false);
+    });
 });
 
 describe('DELETE /api/books/:memberId/transactions/:id', () => {
@@ -110,6 +121,11 @@ describe('DELETE /api/books/:memberId/transactions/:id', () => {
         const data = await getRes.json();
         expect(data.transactions).toHaveLength(0);
     });
+
+    it('상대방 책의 거래는 삭제할 수 없다 (403)', async () => {
+        const res = await handleApiRequest(req('/api/books/m-mj/transactions/1', { method: 'DELETE', code: 'JT-CODE' }), env);
+        expect(res.status).toBe(403);
+    });
 });
 
 describe('PUT /api/books/:memberId/settings', () => {
@@ -124,6 +140,15 @@ describe('PUT /api/books/:memberId/settings', () => {
         const getRes = await handleApiRequest(req('/api/books/m-jt', { code: 'JT-CODE' }), env);
         const data = await getRes.json();
         expect(data.settings.title).toBe('정태 가계부');
+    });
+
+    it('상대방 책 설정은 저장할 수 없다 (403)', async () => {
+        const res = await handleApiRequest(req('/api/books/m-mj/settings', {
+            method: 'PUT',
+            code: 'JT-CODE',
+            body: { settings: { title: '정태 가계부', accounts: [], categories: ['식비'], monthlyBudgets: {}, fixedExpenses: [], monthlyGoals: {}, monthlyAssetsData: {} } }
+        }), env);
+        expect(res.status).toBe(403);
     });
 });
 
@@ -143,5 +168,20 @@ describe('POST /api/books/:memberId/import', () => {
         const data = await res.json();
         expect(data.success).toBe(true);
         expect(data.importedCount).toBe(1);
+    });
+
+    it('상대방 책에는 가져오기를 할 수 없다 (403)', async () => {
+        const res = await handleApiRequest(req('/api/books/m-mj/import', {
+            method: 'POST',
+            code: 'JT-CODE',
+            body: {
+                backup: {
+                    transactions: [{ id: 1, date: '2026-07-01', type: 'income', category: '월급', amount: 3000000, desc: '월급', excludeFromBudget: false }],
+                    appTitle: '가져온 가계부',
+                    accounts: [], categories: ['식비'], monthlyBudgets: {}, fixedExpenses: [], monthlyGoals: {}, monthlyAssetsData: {}
+                }
+            }
+        }), env);
+        expect(res.status).toBe(403);
     });
 });

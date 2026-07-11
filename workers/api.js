@@ -13,6 +13,15 @@ function json(body, status = 200) {
     });
 }
 
+async function parseJsonBody(request) {
+    try {
+        const body = await request.json();
+        return { body };
+    } catch (e) {
+        return { error: json({ success: false, message: '잘못된 요청 본문입니다.' }, 400) };
+    }
+}
+
 async function requireMember(request, env) {
     const code = request.headers.get('X-Member-Code');
     if (!code) {
@@ -64,7 +73,8 @@ export async function handleApiRequest(request, env) {
         }
 
         if (parts.length === 4 && parts[3] === 'transactions' && request.method === 'POST') {
-            const body = await request.json();
+            const { body, error: parseError } = await parseJsonBody(request);
+            if (parseError) return parseError;
             await db.insertTransaction(env.DB, targetMemberId, body.transaction);
             return json({ success: true }, 201);
         }
@@ -75,13 +85,15 @@ export async function handleApiRequest(request, env) {
         }
 
         if (parts.length === 4 && parts[3] === 'settings' && request.method === 'PUT') {
-            const body = await request.json();
+            const { body, error: parseError } = await parseJsonBody(request);
+            if (parseError) return parseError;
             await db.putSettings(env.DB, targetMemberId, body.settings);
             return json({ success: true });
         }
 
         if (parts.length === 4 && parts[3] === 'import' && request.method === 'POST') {
-            const body = await request.json();
+            const { body, error: parseError } = await parseJsonBody(request);
+            if (parseError) return parseError;
             const importedCount = await db.importBook(env.DB, targetMemberId, body.backup);
             return json({ success: true, importedCount });
         }
