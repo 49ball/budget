@@ -864,6 +864,10 @@
     }
 
     function editTitle() {
+        if (document.body.classList.contains('read-only-mode')) {
+            alert("상대방의 가계부는 이름을 변경할 수 없습니다.");
+            return;
+        }
         const newTitle = prompt("가계부 이름을 입력해주세요 (예: 철수의 가계부):", appTitle);
         if (newTitle) {
             appTitle = newTitle;
