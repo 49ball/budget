@@ -102,8 +102,7 @@ settings (
 - `POST /api/login` — 코드 검증, `member_id` / 상대방 `member` 정보 반환
 - `GET /api/books/:memberId` — 해당 사람의 거래 내역 + 설정값 전체 조회
 - `POST /api/books/:memberId/transactions` — 거래 내역 1건 추가
-- `PUT /api/books/:memberId/transactions/:id` — 거래 내역 1건 수정
-- `DELETE /api/books/:memberId/transactions/:id` — 거래 내역 1건 삭제
+- `DELETE /api/books/:memberId/transactions/:id` — 거래 내역 1건 삭제 (기존 프론트 코드가 "수정 = 삭제 후 재생성"으로 동작하므로 별도 수정용 엔드포인트는 두지 않는다)
 - `PUT /api/books/:memberId/settings` — 설정값 전체 덮어쓰기
 - `POST /api/books/:memberId/import` — 백업 JSON 파일 일괄 이전 (아래 "마이그레이션" 참조)
 
