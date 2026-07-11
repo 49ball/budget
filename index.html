@@ -322,6 +322,7 @@
         .text-muted   { color: var(--text-sub) !important; }
         .text-secondary { color: rgba(180,185,230,0.7) !important; }
         .text-danger  { color: #ff7675 !important; }
+        body.read-only-mode .owner-only { display: none !important; }
         .text-success { color: #55efc4 !important; }
         .text-primary { color: #a29bfe !important; }
         .text-dark    { color: var(--text)  !important; }
@@ -358,18 +359,25 @@
             <button class="btn btn-outline-warning btn-sm" onclick="openYearlyReport()">📅 연간 리포트</button>
             <button class="btn btn-outline-primary btn-sm" onclick="openAssetTrendReport()">📈 자산 변동</button>
             <button class="btn btn-outline-success btn-sm ms-2" onclick="syncAllStockPrices()">📈 시세 업데이트</button>
-            <button class="btn btn-outline-info btn-sm ms-2" onclick="exportData()">💾 백업 저장</button>
-            <button class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('importFile').click()">📂 백업 불러오기</button>
+            <button class="btn btn-outline-info btn-sm ms-2 owner-only" onclick="exportData()">💾 백업 저장</button>
+            <button class="btn btn-outline-secondary btn-sm owner-only" onclick="document.getElementById('importFile').click()">📂 백업 불러오기</button>
             <button class="btn btn-outline-success btn-sm" onclick="exportToCSV()">📊 엑셀 저장</button>
         </div>
     </div>
 </nav>
 
+<div class="container mb-3" id="bookTabBar" style="display:none;">
+    <ul class="nav nav-pills">
+        <li class="nav-item"><button type="button" class="nav-link active" id="tabMine" onclick="switchBookTab('mine')">내 가계부</button></li>
+        <li class="nav-item"><button type="button" class="nav-link" id="tabPartner" onclick="switchBookTab('partner')">상대방 가계부</button></li>
+    </ul>
+</div>
+
 <div class="container">
     <!-- 0. 커플 목표 -->
     <div class="alert alert-info d-flex justify-content-between align-items-center mb-4 shadow-sm" style="border-radius: 15px; background-color: #eef2ff; border-color: #c7d2fe;">
         <div id="coupleGoalDisplay" class="fw-bold fs-5 text-primary" style="letter-spacing: -0.5px;">🎯 우리의 목표: </div>
-        <button class="btn btn-sm btn-primary text-white" onclick="editGoal()">목표 설정</button>
+        <button class="btn btn-sm btn-primary text-white owner-only" onclick="editGoal()">목표 설정</button>
     </div>
 
     <!-- 1. 자산 및 주식 현황 -->
@@ -383,7 +391,7 @@
                     <hr class="border-light opacity-50 my-2">
                     <div class="d-flex align-items-center justify-content-between">
                         <input type="month" id="saveAssetMonth" class="form-control form-control-sm text-center" style="max-width: 120px; font-size: 0.85rem;">
-                        <button class="btn btn-sm btn-light text-primary fw-bold ms-2" style="font-size: 0.85rem;" onclick="saveCurrentTotalAsset()">이 달의 자산으로 기록</button>
+                        <button class="btn btn-sm btn-light text-primary fw-bold ms-2 owner-only" style="font-size: 0.85rem;" onclick="saveCurrentTotalAsset()">이 달의 자산으로 기록</button>
                     </div>
                 </div>
             </div>
@@ -430,7 +438,7 @@
     <!-- 2. 입력 폼 -->
     <div class="card p-4">
         <h4>🖊️ 내역 입력하기</h4>
-        <form id="accountForm" class="row g-3">
+        <form id="accountForm" class="row g-3 owner-only">
             <div class="col-md-2">
                 <input type="date" class="form-control" id="date" required>
             </div>
@@ -555,7 +563,7 @@
             <div class="modal-body">
                 <div class="input-group mb-3">
                     <input type="text" id="newCategoryInput" class="form-control" placeholder="새 카테고리 이름">
-                    <button class="btn btn-primary" onclick="addCategory()">추가</button>
+                    <button class="btn btn-primary owner-only" onclick="addCategory()">추가</button>
                 </div>
                 <ul class="list-group" id="categoryListGroup">
                     <!-- 리스트 들어가는 곳 -->
@@ -602,7 +610,7 @@
                     <div class="col-6"><input type="number" id="newAccountQuantity" class="form-control" placeholder="보유 수량 (선택)" style="display:none;"></div>
                     
                     <div class="col-12 mt-2">
-                        <button class="btn btn-primary w-100" onclick="addAccount()">➕ 계좌 추가하기</button>
+                        <button class="btn btn-primary w-100 owner-only" onclick="addAccount()">➕ 계좌 추가하기</button>
                     </div>
                 </div>
                 <ul class="list-group" id="accountListGroup">
@@ -707,14 +715,14 @@
                     <input type="text" id="fixedDesc" class="form-control" placeholder="내용 (예: 넷플릭스)">
                     <input type="number" id="fixedAmount" class="form-control" placeholder="금액">
                     <input type="number" id="fixedDay" class="form-control" placeholder="일(Day)" style="max-width: 80px;">
-                    <button class="btn btn-primary" onclick="addFixedExpense()">추가</button>
+                    <button class="btn btn-primary owner-only" onclick="addFixedExpense()">추가</button>
                 </div>
                 <ul class="list-group mb-3" id="fixedExpenseList">
                     <!-- 리스트 -->
                 </ul>
                 <hr>
                 <div class="d-grid">
-                    <button class="btn btn-success" onclick="applyFixedExpensesToCurrentMonth()">👇 이번 달에 고정 지출 일괄 등록하기</button>
+                    <button class="btn btn-success owner-only" onclick="applyFixedExpensesToCurrentMonth()">👇 이번 달에 고정 지출 일괄 등록하기</button>
                 </div>
             </div>
         </div>
@@ -758,7 +766,7 @@
                             <input type="text" id="manualAssetAmount" class="form-control" placeholder="총 자산 금액">
                         </div>
                         <div class="col-md-3 d-grid">
-                            <button class="btn btn-primary" onclick="saveManualMonthlyAsset()">추가/수정</button>
+                            <button class="btn btn-primary owner-only" onclick="saveManualMonthlyAsset()">추가/수정</button>
                         </div>
                     </div>
                 </div>
@@ -837,6 +845,7 @@
             monthlyGoals = book.settings.monthlyGoals;
             monthlyAssetsData = book.settings.monthlyAssetsData;
             appTitle = book.settings.title;
+            setupPartnerTabUI();
         } catch (err) {
             alert('온라인 데이터를 불러오지 못했습니다. 인터넷 연결을 확인해주세요.\n' + err.message);
         }
@@ -986,7 +995,7 @@
                     <strong>${monthKey}</strong>
                     <span class="text-muted ms-2">${parseKrwAmount(amount).toLocaleString()}원</span>
                 </div>
-                <button class="btn btn-outline-danger btn-sm" onclick="deleteMonthlyAssetRecord('${monthKey}')">삭제</button>
+                <button class="btn btn-outline-danger btn-sm owner-only" onclick="deleteMonthlyAssetRecord('${monthKey}')">삭제</button>
             </div>
         `).join('');
     }
@@ -1130,9 +1139,9 @@
                     </div>
                     <div class="account-actions">
                         ${syncBtn}
-                        <button class="btn btn-sm btn-outline-secondary" onclick="editAccountInfo(${acc.id})">정보 수정</button>
-                        <button class="btn btn-sm btn-outline-primary" onclick="editAccount(${acc.id})">${acc.type === 'stock' ? '평가액 수정' : '금액 수정'}</button>
-                        <button class="btn btn-sm btn-outline-danger" onclick="deleteAccount(${acc.id})">삭제</button>
+                        <button class="btn btn-sm btn-outline-secondary owner-only" onclick="editAccountInfo(${acc.id})">정보 수정</button>
+                        <button class="btn btn-sm btn-outline-primary owner-only" onclick="editAccount(${acc.id})">${acc.type === 'stock' ? '평가액 수정' : '금액 수정'}</button>
+                        <button class="btn btn-sm btn-outline-danger owner-only" onclick="deleteAccount(${acc.id})">삭제</button>
                     </div>
                 </li>
             `;
@@ -1583,7 +1592,7 @@
             list.innerHTML += `
                 <li class="list-group-item d-flex justify-content-between align-items-center">
                     ${c}
-                    <button class="btn btn-sm btn-danger" onclick="deleteCategory(${index})">삭제</button>
+                    <button class="btn btn-sm btn-danger owner-only" onclick="deleteCategory(${index})">삭제</button>
                 </li>
             `;
         });
@@ -1623,7 +1632,7 @@
             list.innerHTML += `
                 <li class="list-group-item d-flex justify-content-between align-items-center">
                     <span>Run <b>${item.day}일</b>: ${item.desc} (${item.amount.toLocaleString()}원)</span>
-                    <button class="btn btn-sm btn-outline-danger" onclick="deleteFixedExpense(${index})">삭제</button>
+                    <button class="btn btn-sm btn-outline-danger owner-only" onclick="deleteFixedExpense(${index})">삭제</button>
                 </li>
             `;
         });
@@ -1809,6 +1818,41 @@
         saveSettingsToServer();
     }
 
+    let currentBookTab = 'mine';
+
+    function setupPartnerTabUI() {
+        const session = getSyncSession();
+        if (!session || !session.partnerId) return;
+        document.getElementById('tabPartner').innerText = `${session.partnerName} 가계부`;
+        document.getElementById('bookTabBar').style.display = 'block';
+    }
+
+    async function switchBookTab(tab) {
+        if (tab === currentBookTab) return;
+        try {
+            const book = tab === 'partner' ? await fetchPartnerBook() : await fetchOwnBook();
+            transactions = book.transactions;
+            if (book.settings) {
+                accounts = book.settings.accounts;
+                categories = book.settings.categories;
+                monthlyBudgets = book.settings.monthlyBudgets;
+                fixedExpenses = book.settings.fixedExpenses;
+                monthlyGoals = book.settings.monthlyGoals;
+                monthlyAssetsData = book.settings.monthlyAssetsData;
+                appTitle = book.settings.title;
+            }
+            currentBookTab = tab;
+            document.getElementById('tabMine').classList.toggle('active', tab === 'mine');
+            document.getElementById('tabPartner').classList.toggle('active', tab === 'partner');
+            document.body.classList.toggle('read-only-mode', tab === 'partner');
+            updateTitleUI();
+            renderCategoryOptions();
+            renderAll();
+        } catch (err) {
+            alert('가계부를 불러오지 못했습니다.\n' + err.message);
+        }
+    }
+
     // 데이터 삭제
     function deleteItem(id) {
         const target = transactions.find(t => t.id === id);
@@ -1861,8 +1905,8 @@
                         ${t.type === 'income' ? '+' : '-'}${t.amount.toLocaleString()}원
                     </td>
                     <td>
-                        <button class="btn btn-sm btn-outline-primary border-0 me-1" onclick="editTransaction(${t.id})" title="수정하기"><i class="bi bi-pencil"></i></button>
-                        <button class="btn btn-sm btn-outline-danger border-0" onclick="deleteItem(${t.id})" title="삭제하기"><i class="bi bi-trash"></i></button>
+                        <button class="btn btn-sm btn-outline-primary border-0 me-1 owner-only" onclick="editTransaction(${t.id})" title="수정하기"><i class="bi bi-pencil"></i></button>
+                        <button class="btn btn-sm btn-outline-danger border-0 owner-only" onclick="deleteItem(${t.id})" title="삭제하기"><i class="bi bi-trash"></i></button>
                     </td>
                 </tr>
             `;
