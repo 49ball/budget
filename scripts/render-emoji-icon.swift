@@ -1,14 +1,26 @@
 import AppKit
 
 let args = CommandLine.arguments
-guard args.count == 4 else {
-    print("usage: swift render-emoji-icon.swift <emoji> <size> <outputPath>")
+guard args.count == 5 else {
+    print("usage: swift render-emoji-icon.swift <emoji> <size> <outputPath> <hexColor>")
     exit(1)
 }
 
 let emoji = args[1]
 let pixelSize = Int(args[2]) ?? 512
 let outputPath = args[3]
+let hexColor = args[4]
+
+func colorFromHex(_ hex: String) -> NSColor {
+    var cleaned = hex.trimmingCharacters(in: .whitespaces)
+    if cleaned.hasPrefix("#") { cleaned.removeFirst() }
+    var rgb: UInt64 = 0
+    Scanner(string: cleaned).scanHexInt64(&rgb)
+    let r = CGFloat((rgb & 0xFF0000) >> 16) / 255.0
+    let g = CGFloat((rgb & 0x00FF00) >> 8) / 255.0
+    let b = CGFloat(rgb & 0x0000FF) / 255.0
+    return NSColor(calibratedRed: r, green: g, blue: b, alpha: 1.0)
+}
 
 guard let bitmap = NSBitmapImageRep(
     bitmapDataPlanes: nil,
@@ -32,8 +44,8 @@ NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: bitmap)
 
 let size = CGFloat(pixelSize)
 
-// Background: solid fill matching the app's theme color (#7c6ff7)
-let bgColor = NSColor(calibratedRed: 124.0/255.0, green: 111.0/255.0, blue: 247.0/255.0, alpha: 1.0)
+// Background: solid fill using the passed-in color
+let bgColor = colorFromHex(hexColor)
 bgColor.setFill()
 NSBezierPath(rect: NSRect(x: 0, y: 0, width: size, height: size)).fill()
 
