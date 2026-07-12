@@ -360,7 +360,7 @@
 
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
     <div class="container">
-        <a class="navbar-brand" href="#" id="appTitle" onclick="editTitle()" style="cursor: pointer;" title="클릭하여 이름 변경"><i class="bi bi-heart-fill text-danger"></i> 커플 가계부</a>
+        <a class="navbar-brand" href="#" id="appTitle" onclick="editTitle()" style="cursor: pointer;" title="클릭하여 이름 변경">📒 커플 가계부</a>
         <div>
             <button class="btn btn-outline-light btn-sm me-2" onclick="openGuideModal()">📖 사용법</button>
             <button class="btn btn-outline-light btn-sm me-2" onclick="openFixedExpenseModal()">🔄 고정지출 관리</button>
@@ -868,7 +868,7 @@
     });
 
     function updateTitleUI() {
-        document.getElementById('appTitle').innerHTML = `<i class="bi bi-heart-fill text-danger"></i> ${appTitle}`;
+        document.getElementById('appTitle').innerHTML = `📒 ${appTitle}`;
     }
 
     function editTitle() {
