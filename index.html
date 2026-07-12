@@ -366,7 +366,7 @@
             <button class="btn btn-outline-light btn-sm me-2" onclick="openFixedExpenseModal()">🔄 고정지출 관리</button>
             <button class="btn btn-outline-warning btn-sm" onclick="openYearlyReport()">📅 연간 리포트</button>
             <button class="btn btn-outline-primary btn-sm" onclick="openAssetTrendReport()">📈 자산 변동</button>
-            <button class="btn btn-outline-success btn-sm ms-2" onclick="syncAllStockPrices()">📈 시세 업데이트</button>
+            <button class="btn btn-outline-success btn-sm ms-2 owner-only" onclick="syncAllStockPrices()">📈 시세 업데이트</button>
             <button class="btn btn-outline-info btn-sm ms-2 owner-only" onclick="exportData()">💾 백업 저장</button>
             <button class="btn btn-outline-secondary btn-sm owner-only" onclick="document.getElementById('importFile').click()">📂 백업 불러오기</button>
             <button class="btn btn-outline-success btn-sm" onclick="exportToCSV()">📊 엑셀 저장</button>
@@ -1112,7 +1112,7 @@
             // 시세 연동 버튼 (티커가 있을 경우)
             let syncBtn = '';
             if (acc.ticker) {
-                syncBtn = `<button class="btn btn-sm btn-outline-success me-1" onclick="fetchAndApplyPrice(${acc.id})" title="현재 시세로 업데이트">🔄 시세 적용</button>`;
+                syncBtn = `<button class="btn btn-sm btn-outline-success me-1 owner-only" onclick="fetchAndApplyPrice(${acc.id})" title="현재 시세로 업데이트">🔄 시세 적용</button>`;
             }
 
             // 상세 타입 뱃지
