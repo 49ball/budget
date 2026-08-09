@@ -370,6 +370,7 @@
             <button class="btn btn-outline-info btn-sm ms-2 owner-only" onclick="exportData()">💾 백업 저장</button>
             <button class="btn btn-outline-secondary btn-sm owner-only" onclick="document.getElementById('importFile').click()">📂 백업 불러오기</button>
             <button class="btn btn-outline-success btn-sm" onclick="exportToCSV()">📊 엑셀 저장</button>
+            <button class="btn btn-outline-light btn-sm ms-2" id="accountSwitchBtn" onclick="switchAccount()">👤 계정 전환</button>
         </div>
     </div>
 </nav>
@@ -872,6 +873,7 @@
         }
 
         updateTitleUI();
+        updateAccountSwitchUI();
         renderCategoryOptions();
         const lastPriceUpdate = localStorage.getItem('budget_last_price_update');
         if (lastPriceUpdate) {
@@ -1803,6 +1805,43 @@
     }
 
     let currentBookTab = 'mine';
+
+    // 가계부 본문은 로그인한 멤버의 것만 로컬에 캐시된다. 계정을 바꿀 때 남겨두면
+    // 서버 조회가 실패했을 때 이전 사람의 데이터가 보이므로 같이 지운다.
+    const localBookCacheKeys = [
+        'couple_account_book',
+        'couple_accounts',
+        'couple_categories',
+        'couple_monthly_budgets',
+        'couple_fixed_expenses',
+        'couple_monthly_goals',
+        'couple_monthly_assets',
+        'budget_last_price_update'
+    ];
+
+    function updateAccountSwitchUI() {
+        const session = getSyncSession();
+        const button = document.getElementById('accountSwitchBtn');
+        button.innerText = session ? `👤 ${session.memberName}` : '👤 계정 전환';
+        button.title = session
+            ? `${session.memberName}(으)로 로그인됨. 눌러서 다른 코드로 전환합니다.`
+            : '가계부 코드를 입력합니다.';
+    }
+
+    function switchAccount() {
+        const session = getSyncSession();
+        const current = session ? `현재 ${session.memberName}(으)로 로그인되어 있습니다.\n\n` : '';
+        const confirmed = confirm(
+            `${current}다른 코드로 전환할까요?\n\n`
+            + '저장된 코드를 지우고 새로고침합니다.\n'
+            + '가계부 내용은 서버에 있으므로 사라지지 않습니다.'
+        );
+        if (!confirmed) return;
+
+        clearSyncSession();
+        localBookCacheKeys.forEach(key => localStorage.removeItem(key));
+        location.reload();
+    }
 
     function setupPartnerTabUI() {
         const session = getSyncSession();

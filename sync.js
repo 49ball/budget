@@ -72,6 +72,12 @@ async function loginWithCode(code) {
     return syncSession;
 }
 
+// 저장된 코드를 지운다. 다음 요청 때 ensureLoggedIn()이 코드를 다시 묻는다.
+function clearSyncSession() {
+    syncSession = null;
+    localStorage.removeItem('couple_member_code');
+}
+
 async function ensureLoggedIn() {
     if (syncSession) return syncSession;
 
