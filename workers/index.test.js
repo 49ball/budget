@@ -12,13 +12,14 @@ describe('요청 라우팅', () => {
         expect(res.status).toBe(401); // api.js가 처리했다는 뜻 (코드가 없어서 401)
     });
 
-    it('/api/가 아니면 기존 가격 조회 워커로 위임한다', async () => {
-        const request = new Request('https://example.com/prices?symbols=AAPL');
+    it('/api/가 아니면 시세 워커로 위임한다', async () => {
+        // symbols가 없으면 400으로 끝나므로 외부 호출 없이 위임 여부만 확인할 수 있다.
+        const request = new Request('https://example.com/prices');
         const res = await worker.fetch(request, env);
         const data = await res.json();
-        // price-worker.js는 실제 Yahoo Finance를 호출하므로 성공 여부와 무관하게
-        // '이 요청을 처리한 것은 price-worker다'만 확인한다: success 필드가 존재해야 한다.
-        expect(data).toHaveProperty('success');
+
+        expect(res.status).toBe(400);
+        expect(data.message).toMatch(/symbols/);
     });
 
     it('OPTIONS 요청에 CORS 헤더로 응답한다', async () => {

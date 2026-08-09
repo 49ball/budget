@@ -2,3 +2,6 @@
 node_modules/
 .wrangler/
 package-lock.json
+
+# scripts/build-symbol-master.js가 생성하는 종목 마스터 (1.5MB, 매번 새로 만들 수 있음)
+workers/symbols.sql

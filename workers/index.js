@@ -1,4 +1,4 @@
-import priceWorker from './price-worker.js';
+import priceWorker from './prices/index.js';
 import { handleApiRequest, API_CORS_HEADERS } from './api.js';
 
 export default {

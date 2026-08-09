@@ -629,10 +629,12 @@
                 </div>
                 <div class="mt-2 text-muted small bg-light p-2 rounded">
                     <strong>💡 시세 연동 팁:</strong><br>
-                    - <b>미국 주식:</b> AAPL, NVDA, MSFT 등 Yahoo Finance 티커<br>
-                    - <b>한국 주식:</b> 005930.KS, 035720.KS, 086520.KQ 등 (.KS/.KQ 권장)<br>
+                    - <b>미국 주식:</b> AAPL, NVDA, MSFT 등 티커<br>
+                    - <b>한국 주식:</b> 005930.KS, 035720.KS, 086520.KQ 등 (6자리 코드만 입력해도 됩니다)<br>
+                    - <b>코인:</b> BTC-USD, ETH-USD 등 (업비트 원화 시세)<br>
                     - <b>KRX 금:</b> KRX-GOLD, 수량은 보유 g 기준으로 입력<br>
-                    - <b>원화 환산:</b> USD 주식은 시세 업데이트 시 환율을 함께 반영합니다.
+                    - <b>종목명 검색:</b> 애플, 삼성전자처럼 한글 이름으로 찾을 수 있습니다.<br>
+                    - <b>원화 환산:</b> 해외 주식은 한국투자증권 고시 환율로 함께 환산됩니다.
                 </div>
             </div>
         </div>
@@ -820,8 +822,19 @@
     let currentDate = new Date(); // 현재 보고 있는 달
     let selectedDate = null; // 선택된 날짜 저장
     let editingId = null; // 현재 수정 중인 내역 ID
-    const defaultPriceApiUrl = 'https://stock-price-worker.49ball.workers.dev';
-    let priceApiUrl = localStorage.getItem('budget_price_api_url') || defaultPriceApiUrl;
+    const defaultPriceApiUrl = 'https://budget-price-worker.49ball.workers.dev';
+    // 야후 시세를 쓰던 옛 워커. 브라우저에 이 주소가 저장돼 있으면 새 주소로 넘긴다.
+    const legacyPriceApiHosts = ['stock-price-worker.49ball.workers.dev'];
+    let priceApiUrl = readSavedPriceApiUrl();
+
+    function readSavedPriceApiUrl() {
+        const saved = localStorage.getItem('budget_price_api_url');
+        if (!saved || legacyPriceApiHosts.some(host => saved.includes(host))) {
+            localStorage.removeItem('budget_price_api_url');
+            return defaultPriceApiUrl;
+        }
+        return saved;
+    }
     
     // 초기 실행
     document.addEventListener('DOMContentLoaded', async () => {
@@ -1262,7 +1275,7 @@
             const tickerInput = prompt(`시세 연동 티커를 입력하세요.\n예: AAPL, 005930.KS, KRX-GOLD\n종목명으로 검색하려면 이름을 입력하세요.${currentTickerText}`, "");
             if (tickerInput === null) return;
 
-            newTicker = tickerInput.trim() ? normalizeYahooTicker(tickerInput) : newTicker;
+            newTicker = tickerInput.trim() ? normalizeTicker(tickerInput) : newTicker;
             const directTickerPattern = /^[A-Z0-9.-]+$/.test(newTicker);
             if (!newTicker || !directTickerPattern) {
                 const foundTicker = await chooseTicker(newTicker || newName);
@@ -1346,51 +1359,10 @@
         }
     }
 
-    function normalizeYahooTicker(ticker) {
-        const value = String(ticker || '').trim().toUpperCase();
-        const stockAliases = {
-            애플: 'AAPL',
-            APPLE: 'AAPL',
-            엔비디아: 'NVDA',
-            NVIDIA: 'NVDA',
-            테슬라: 'TSLA',
-            TESLA: 'TSLA',
-            마이크로소프트: 'MSFT',
-            MICROSOFT: 'MSFT',
-            삼성전자: '005930.KS',
-            삼성: '005930.KS',
-            네이버: '035420.KS',
-            NAVER: '035420.KS',
-            카카오: '035720.KS',
-            에코프로: '086520.KQ'
-        };
-        const cryptoAliases = {
-            BITCOIN: 'BTC-USD',
-            BTC: 'BTC-USD',
-            ETHEREUM: 'ETH-USD',
-            ETH: 'ETH-USD',
-            RIPPLE: 'XRP-USD',
-            XRP: 'XRP-USD',
-            DOGECOIN: 'DOGE-USD',
-            DOGE: 'DOGE-USD',
-            SOLANA: 'SOL-USD',
-            SOL: 'SOL-USD',
-            CARDANO: 'ADA-USD',
-            ADA: 'ADA-USD'
-        };
-        const goldAliases = {
-            GOLD: 'KRX-GOLD',
-            'KRX-GOLD': 'KRX-GOLD',
-            KRXGOLD: 'KRX-GOLD',
-            금: 'KRX-GOLD',
-            금현물: 'KRX-GOLD',
-            KRX금: 'KRX-GOLD'
-        };
-        if (stockAliases[value]) return stockAliases[value];
-        if (cryptoAliases[value]) return cryptoAliases[value];
-        if (goldAliases[value]) return goldAliases[value];
-        if (/^\d{6}$/.test(value)) return `${value}.KS`;
-        return value;
+    // 종목명 별칭과 거래소 접미사 해석은 워커가 KIS 종목 마스터를 보고 처리한다.
+    // 여기서는 서버로 보낼 문자열과 응답을 찾을 키가 같도록 표기만 맞춘다.
+    function normalizeTicker(ticker) {
+        return String(ticker || '').trim().toUpperCase();
     }
 
     function getPriceApiUrl() {
@@ -1411,7 +1383,7 @@
         const apiUrl = getPriceApiUrl();
         if (!apiUrl) throw new Error('시세 API 주소가 설정되지 않았습니다.');
 
-        const uniqueSymbols = [...new Set(symbols.map(normalizeYahooTicker).filter(Boolean))];
+        const uniqueSymbols = [...new Set(symbols.map(normalizeTicker).filter(Boolean))];
         const url = `${apiUrl}/prices?symbols=${encodeURIComponent(uniqueSymbols.join(','))}`;
         const res = await fetch(url);
         const data = await res.json();
@@ -1483,10 +1455,10 @@
             let updatedCount = 0;
             let totalDiff = 0;
             const failed = [];
-            const requestedSymbols = activeTargets.map(a => normalizeYahooTicker(a.ticker)).join(', ');
+            const requestedSymbols = activeTargets.map(a => normalizeTicker(a.ticker)).join(', ');
 
             activeTargets.forEach(acc => {
-                const symbol = normalizeYahooTicker(acc.ticker);
+                const symbol = normalizeTicker(acc.ticker);
                 const quote = quotes[symbol];
                 if (!quote) {
                     failed.push(`${acc.name} (${symbol})`);
@@ -1545,7 +1517,7 @@
         }
 
         try {
-            const symbol = normalizeYahooTicker(acc.ticker);
+            const symbol = normalizeTicker(acc.ticker);
             const quotes = await fetchPriceQuotes([symbol]);
             const quote = quotes[symbol];
             if (!quote) {
