@@ -53,7 +53,9 @@ export function classify(symbol) {
     }
 
     // 005930, 005930.KS, 086520.KQ 모두 KIS에는 6자리 코드로 넘긴다.
-    const domestic = value.match(/^(\d{6})(?:\.(?:KS|KQ))?$/);
+    // 국내 코드는 숫자로 시작하고 뒷자리에 문자가 섞일 수 있다(0041E0, 00088K).
+    // 해외 티커는 항상 문자로 시작하므로 이 조건으로 둘을 구분할 수 있다.
+    const domestic = value.match(/^(\d[0-9A-Z]{5})(?:\.(?:KS|KQ))?$/);
     if (domestic) {
         return { kind: 'domestic', symbol: value, code: domestic[1] };
     }

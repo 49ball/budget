@@ -24,6 +24,13 @@ describe('classify', () => {
         expect(classify('086520.KQ')).toEqual({ kind: 'domestic', symbol: '086520.KQ', code: '086520' });
     });
 
+    // KRX가 발행하는 6자리 코드에는 숫자 사이에 문자가 섞이기도 한다.
+    it('문자가 섞인 국내 코드도 국내주식으로 본다', () => {
+        expect(classify('0041E0')).toEqual({ kind: 'domestic', symbol: '0041E0', code: '0041E0' });
+        expect(classify('0041E0.KS')).toEqual({ kind: 'domestic', symbol: '0041E0.KS', code: '0041E0' });
+        expect(classify('00088K')).toEqual({ kind: 'domestic', symbol: '00088K', code: '00088K' });
+    });
+
     it('해외 티커는 거래소 코드 없이 overseas로 분류한다', () => {
         expect(classify('AAPL')).toEqual({ kind: 'overseas', symbol: 'AAPL', code: 'AAPL' });
     });

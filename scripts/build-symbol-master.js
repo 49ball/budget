@@ -144,8 +144,10 @@ function parseDomestic(text, { exchange, suffix, trailer }) {
                 size: extra.slice(DOMESTIC_SIZE_OFFSET, DOMESTIC_SIZE_OFFSET + 1)
             };
         })
-        // 펀드/워런트 등은 코드 형태가 달라 걸러진다. 우선주(00088K)는 마지막 자리가 문자다.
-        .filter(row => /^\d{5}[0-9A-Z]$/.test(row.code) && row.name)
+        // 국내 종목코드는 6자리이고 항상 숫자로 시작하지만, 뒷자리에는 문자가 섞일 수 있다.
+        // (0041E0 = KODEX 미국S&P500액티브, 00088K = 한화3우B)
+        // 펀드(F70100030)처럼 자리수가 다른 것은 여기서 걸러진다.
+        .filter(row => /^\d[0-9A-Z]{5}$/.test(row.code) && row.name)
         .map(row => ({
             ticker: `${row.code}${suffix}`,
             code: row.code,
