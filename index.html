@@ -809,7 +809,9 @@
 
 <!-- 스크립트 로드 -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="sync.js"></script>
+<!-- GitHub Pages가 max-age=600으로 내려주므로, sync.js를 고치면 v를 올려야
+     index.html만 새 버전이고 sync.js는 캐시된 옛 버전인 상태를 막을 수 있다. -->
+<script src="sync.js?v=2"></script>
 <script>
     // 1. 데이터 관리 (LocalStorage 사용)
     let transactions = JSON.parse(localStorage.getItem('couple_account_book')) || [];
@@ -1806,9 +1808,15 @@
 
     let currentBookTab = 'mine';
 
-    // 가계부 본문은 로그인한 멤버의 것만 로컬에 캐시된다. 계정을 바꿀 때 남겨두면
-    // 서버 조회가 실패했을 때 이전 사람의 데이터가 보이므로 같이 지운다.
-    const localBookCacheKeys = [
+    // 계정을 바꿀 때 지울 항목. 로그인 코드와, 로그인한 멤버의 가계부 캐시를 함께 지운다.
+    // 캐시를 남겨두면 서버 조회가 실패했을 때 이전 사람의 데이터가 보인다.
+    //
+    // sync.js의 함수를 부르지 않고 여기서 직접 지운다. 두 파일은 각각 캐시돼서
+    // index.html만 새 버전이고 sync.js는 옛 버전인 상태가 생길 수 있는데,
+    // 그때도 계정 전환은 동작해야 한다. 페이지를 새로고침하므로 sync.js의
+    // 메모리 세션은 어차피 사라진다.
+    const accountSwitchKeys = [
+        'couple_member_code',
         'couple_account_book',
         'couple_accounts',
         'couple_categories',
@@ -1838,8 +1846,7 @@
         );
         if (!confirmed) return;
 
-        clearSyncSession();
-        localBookCacheKeys.forEach(key => localStorage.removeItem(key));
+        accountSwitchKeys.forEach(key => localStorage.removeItem(key));
         location.reload();
     }
 
