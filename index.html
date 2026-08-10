@@ -6,7 +6,7 @@
     <title>가계부</title>
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icons/icon-192.png">
-    <meta name="theme-color" content="#C9A15C">
+    <meta name="theme-color" content="#1B4332">
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => navigator.serviceWorker.register('sw.js'));
@@ -23,64 +23,39 @@
     <!-- 모달 등 기능을 위한 Bootstrap JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <style>
-        /* ── Variables ── */
+        /* ── Variables ──
+           통장(은행 패스북) 컨셉. 단일 "브랜드 액센트"를 여기저기 칠하는 대신,
+           은행 띠 색(초록)과 잉크색(지출=갈색, 수입=초록) 두 가지 규칙으로 색이 정해진다.
+           수입에 별도 색이 없는 건 "흑자(黑字)=검은 글씨"라는 말 그대로를 따른 것. */
         :root {
-            /* 황동/장부 톤. 흔한 보라색 SaaS 액센트 대신 이 앱만의 색을 쓴다. */
-            --primary: #C9A15C;
-            --primary-glow: rgba(201, 161, 92, 0.4);
-            --danger: #D9695B;
-            --success: #6FAE8C;
-            --glass: rgba(201, 161, 92, 0.06);
-            --glass-border: rgba(201, 161, 92, 0.16);
-            --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
-            --text: #F2EDE3;
-            --text-sub: rgba(216, 203, 180, 0.65);
-            --radius: 18px;
+            --bg: #F2EFE6;
+            --stripe: #1B4332;
+            --stripe-text: #F2EFE6;
+            --ink: #1C1C1C;
+            --ink-sub: #5c5c58;
+            --line: #c9c5b4;
+            --line-strong: #1C1C1C;
+            --expense: #7A2E22;
+            --income: #1B4332;
+            --focus: #7A2E22;
+            --radius: 4px;
+            --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", "JetBrains Mono", Consolas, monospace;
         }
 
         /* ── Base ── */
         *, *::before, *::after { box-sizing: border-box; }
 
         body {
-            background: linear-gradient(135deg, #1A1613 0%, #241E17 40%, #14110D 100%);
+            background: var(--bg);
             min-height: 100vh;
-            font-family: 'Noto Sans KR', sans-serif;
-            color: var(--text);
+            font-family: 'Noto Sans KR', -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+            color: var(--ink);
             overflow-x: hidden;
             font-variant-numeric: tabular-nums;
         }
 
-        /* Ambient glow blobs */
-        body::before {
-            content: '';
-            position: fixed;
-            top: -250px; left: -200px;
-            width: 700px; height: 700px;
-            background: radial-gradient(circle, rgba(201,161,92,0.16) 0%, transparent 65%);
-            border-radius: 50%;
-            pointer-events: none;
-            z-index: 0;
-            animation: blobFloat 12s ease-in-out infinite alternate;
-        }
-        body::after {
-            content: '';
-            position: fixed;
-            bottom: -300px; right: -200px;
-            width: 800px; height: 800px;
-            background: radial-gradient(circle, rgba(160,124,61,0.09) 0%, transparent 65%);
-            border-radius: 50%;
-            pointer-events: none;
-            z-index: 0;
-            animation: blobFloat 15s ease-in-out infinite alternate-reverse;
-        }
-        @keyframes blobFloat {
-            from { transform: translate(0, 0) scale(1); }
-            to   { transform: translate(30px, 40px) scale(1.08); }
-        }
-
-        /* 동작 줄이기 설정 사용자에게는 배경 애니메이션을 끄고 전환을 즉시 처리한다. */
+        /* 동작 줄이기 설정 사용자에게는 전환을 즉시 처리한다. */
         @media (prefers-reduced-motion: reduce) {
-            body::before, body::after { animation: none; }
             *, *::before, *::after {
                 animation-duration: 0.01ms !important;
                 animation-iteration-count: 1 !important;
@@ -91,210 +66,221 @@
         .container { position: relative; z-index: 1; }
 
         /* Scrollbar */
-        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(201,161,92,0.22); border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(201,161,92,0.38); }
+        ::-webkit-scrollbar-thumb { background: rgba(27,67,50,0.25); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(27,67,50,0.4); }
 
-        /* ── Navbar ── */
+        /* ── Navbar: 통장 겉표지의 은행 띠 ── */
         .navbar {
-            background: rgba(18, 15, 11, 0.78) !important;
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
-            border-bottom: 1px solid rgba(255,255,255,0.07);
-            box-shadow: 0 2px 24px rgba(0,0,0,0.4);
+            background: var(--stripe) !important;
+            border-bottom: none;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.15);
             position: relative; z-index: 100;
         }
-        .navbar-brand { font-weight: 700; letter-spacing: -0.3px; }
+        .navbar-brand { font-weight: 700; letter-spacing: -0.3px; color: var(--stripe-text) !important; }
 
-        /* ── Glass card base ── */
+        /* navbar는 초록 배경이라, 잉크색(검정) 기준인 일반 아웃라인 버튼 규칙을
+           그대로 쓰면 안 보인다. 여기서만 크림색 기준으로 다시 정의한다. */
+        .navbar .btn-outline-light, .navbar .btn-outline-secondary,
+        .navbar .btn-outline-warning, .navbar .btn-outline-success,
+        .navbar .btn-outline-primary, .navbar .btn-outline-info,
+        .navbar .btn-outline-danger {
+            color: var(--stripe-text);
+            border-color: rgba(242,239,230,0.45);
+            background: transparent;
+        }
+        .navbar .btn-outline-light:hover, .navbar .btn-outline-secondary:hover,
+        .navbar .btn-outline-warning:hover, .navbar .btn-outline-success:hover,
+        .navbar .btn-outline-primary:hover, .navbar .btn-outline-info:hover,
+        .navbar .btn-outline-danger:hover {
+            background: rgba(242,239,230,0.14);
+            color: var(--stripe-text);
+            border-color: var(--stripe-text);
+        }
+        .navbar .btn:focus-visible { outline-color: var(--stripe-text); }
+
+        /* ── 카드: 유리블러 없이 평평한 종이 패널 + 실선 테두리 ── */
         .card {
-            background: var(--glass);
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
-            border: 1px solid var(--glass-border);
+            background: #FBF9F3;
+            border: 1px solid var(--line-strong);
             border-radius: var(--radius);
-            box-shadow: var(--glass-shadow);
+            box-shadow: none;
             margin-bottom: 25px;
-            color: var(--text);
-            transition: transform 0.22s ease, box-shadow 0.22s ease;
-        }
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 18px 44px rgba(0,0,0,0.55);
+            color: var(--ink);
         }
 
-        /* ── Colored asset cards ── */
-        /* 3가지 색은 이미 학습된 자산 구분(총자산/주식/예적금)이라 색상환은 유지하되,
-           채도 높은 디지털 톤 대신 잉크·황동 계열로 가라앉혀 장부 톤에 맞춘다. */
-        .balance-card {
-            background: linear-gradient(135deg, rgba(58,88,133,0.65), rgba(120,150,190,0.45)) !important;
-            border: 1px solid rgba(120,150,190,0.25) !important;
-            color: white !important;
+        /* ── 자산 현황: 카드 3개 대신 통장처럼 한 줄로 구획해 나눈다 ── */
+        .assets-ledger {
+            display: flex;
+            background: #FBF9F3;
+            border: 1px solid var(--line-strong);
+            border-radius: var(--radius);
+            margin-bottom: 25px;
         }
-        /* 이 카드는 클릭해도 아무 동작이 없다. 옆의 stock-card/savings-card와 달리
-           떠오르는 hover를 주지 않아 "누를 수 있는 카드"처럼 보이지 않게 한다. */
-        .balance-card:hover {
-            transform: none;
-            box-shadow: var(--glass-shadow);
+        .assets-ledger .asset-block {
+            flex: 1;
+            padding: 16px 20px;
+            border-left: 1px dotted var(--line);
         }
-        .stock-card {
-            background: linear-gradient(135deg, rgba(47,125,92,0.65), rgba(111,174,140,0.45)) !important;
-            border: 1px solid rgba(111,174,140,0.25) !important;
-            color: white !important;
+        .assets-ledger .asset-block:first-child { border-left: none; }
+        .assets-ledger .asset-block .a-label {
+            font-size: 0.8rem; color: var(--ink-sub); margin-bottom: 6px; font-weight: 600;
         }
-        .savings-card {
-            background: linear-gradient(135deg, rgba(180,138,72,0.65), rgba(224,190,130,0.5)) !important;
-            border: 1px solid rgba(224,190,130,0.25) !important;
-            color: white !important;
+        .assets-ledger .asset-block .a-num {
+            font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+            font-size: 1.5rem; font-weight: 700; letter-spacing: -0.01em;
+        }
+        .assets-ledger .asset-block .a-sub { font-size: 0.78rem; color: var(--ink-sub); margin-top: 6px; }
+        .assets-ledger .asset-block.clickable { cursor: pointer; }
+        .assets-ledger .asset-block.clickable:hover { background: rgba(27,67,50,0.04); }
+        @media (max-width: 768px) {
+            .assets-ledger { flex-direction: column; }
+            .assets-ledger .asset-block { border-left: none; border-top: 1px dotted var(--line); }
+            .assets-ledger .asset-block:first-child { border-top: none; }
         }
 
         /* ── Goal banner ── */
         .alert.alert-info {
-            background: rgba(201,161,92,0.11) !important;
-            border: 1px solid rgba(201,161,92,0.26) !important;
+            background: #FBF9F3 !important;
+            border: 1px solid var(--line-strong) !important;
             border-radius: var(--radius) !important;
-            color: var(--text) !important;
-            backdrop-filter: blur(12px);
+            color: var(--ink) !important;
         }
-        #coupleGoalDisplay { color: #E8C989 !important; }
+        #coupleGoalDisplay { color: var(--ink) !important; }
+        #monthlySummaryLine { color: var(--ink-sub) !important; }
+        #monthlySummaryLine b { color: var(--expense); }
 
         /* ── Form controls ── */
         .form-control, .form-select {
-            background: rgba(255,255,255,0.08);
-            border: 1px solid rgba(255,255,255,0.14);
-            border-radius: 12px;
+            background: #fff;
+            border: 1px solid var(--line-strong);
+            border-radius: var(--radius);
             padding: 12px;
-            color: var(--text);
+            color: var(--ink);
             transition: border-color 0.2s, box-shadow 0.2s;
         }
         .form-control:focus, .form-select:focus {
-            background: rgba(255,255,255,0.11);
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px var(--primary-glow);
-            color: var(--text);
+            background: #fff;
+            border-color: var(--stripe);
+            box-shadow: 0 0 0 2px rgba(27,67,50,0.18);
+            color: var(--ink);
             outline: none;
         }
-        .form-control::placeholder { color: var(--text-sub); }
-        .form-select option { background: #241E17; color: var(--text); }
-        .form-label, label.small, label.form-label { color: var(--text-sub) !important; }
+        .form-control::placeholder { color: var(--ink-sub); }
+        .form-select option { background: #fff; color: var(--ink); }
+        .form-label, label.small, label.form-label { color: var(--ink-sub) !important; }
 
         /* Input group */
         .input-group-text {
-            background: rgba(255,255,255,0.08);
-            border-color: rgba(255,255,255,0.14);
-            color: var(--text);
+            background: #f0ede2;
+            border-color: var(--line-strong);
+            color: var(--ink);
         }
 
-        /* ── Buttons ── */
+        /* ── Buttons: 그라데이션 없이 단색 채움 ── */
         .btn {
-            border-radius: 12px;
+            border-radius: var(--radius);
             padding: 10px 20px;
-            font-weight: 500;
-            transition: all 0.2s;
+            font-weight: 600;
+            transition: background-color 0.15s, transform 0.1s;
         }
         .btn-primary {
-            background: linear-gradient(135deg, #D9B571, #B98A45);
+            background: var(--stripe);
             border: none;
-            color: #1A1613;
-            font-weight: 700;
-            box-shadow: 0 4px 18px rgba(201,161,92,0.4);
+            color: var(--stripe-text);
         }
         .btn-primary:hover {
-            background: linear-gradient(135deg, #E4C588, #C99A54);
-            color: #1A1613;
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(201,161,92,0.55);
+            background: #234f3d;
+            color: var(--stripe-text);
         }
+        .btn-primary:active { transform: scale(0.98); }
         .btn-secondary {
-            background: rgba(255,255,255,0.09);
-            border: 1px solid rgba(255,255,255,0.18);
-            color: var(--text);
+            background: #fff;
+            border: 1px solid var(--line-strong);
+            color: var(--ink);
         }
-        .btn-secondary:hover {
-            background: rgba(255,255,255,0.15);
-            color: white;
-        }
+        .btn-secondary:hover { background: #f0ede2; }
         .btn-warning {
-            background: linear-gradient(135deg, #fdcb6e, #e17055);
+            background: #B5652E;
             border: none;
-            color: white;
+            color: #fff;
         }
-        .btn-warning:hover { filter: brightness(1.1); transform: translateY(-1px); color: white; }
-        .btn-success { background: linear-gradient(135deg, var(--success), #4F8E6E); border: none; }
-        .btn-success:hover { filter: brightness(1.1); transform: translateY(-1px); }
-        .btn-danger  { background: linear-gradient(135deg, var(--danger), #A83F30); border: none; }
+        .btn-warning:hover { background: #9c5527; color: #fff; }
+        .btn-success { background: var(--income); border: none; color: var(--stripe-text); }
+        .btn-success:hover { background: #234f3d; }
+        .btn-danger  { background: var(--expense); border: none; color: #fff; }
+        .btn-danger:hover { background: #5f241a; }
 
-        /* Outline variants → ghost style */
+        /* Outline variants → 잉크 라인 스타일 */
         .btn-outline-secondary, .btn-outline-light, .btn-outline-primary,
         .btn-outline-success, .btn-outline-warning, .btn-outline-danger,
         .btn-outline-info {
-            color: rgba(255,255,255,0.75);
-            border-color: rgba(255,255,255,0.2);
+            color: var(--ink);
+            border-color: var(--line-strong);
             background: transparent;
         }
         .btn-outline-secondary:hover, .btn-outline-light:hover {
-            background: rgba(255,255,255,0.1); color: white; border-color: rgba(255,255,255,0.35);
+            background: #f0ede2; color: var(--ink); border-color: var(--line-strong);
         }
         .btn-outline-primary:hover {
-            background: rgba(201,161,92,0.18); color: #E8C989; border-color: #E8C989;
+            background: rgba(27,67,50,0.08); color: var(--stripe); border-color: var(--stripe);
         }
         .btn-outline-success:hover {
-            background: rgba(111,174,140,0.18); color: var(--success); border-color: var(--success);
+            background: rgba(27,67,50,0.08); color: var(--income); border-color: var(--income);
         }
         .btn-outline-warning:hover {
-            background: rgba(253,203,110,0.18); color: #fdcb6e; border-color: #fdcb6e;
+            background: rgba(181,101,46,0.1); color: #B5652E; border-color: #B5652E;
         }
         .btn-outline-danger:hover {
-            background: rgba(217,105,91,0.18); color: var(--danger); border-color: var(--danger);
+            background: rgba(122,46,34,0.08); color: var(--expense); border-color: var(--expense);
         }
         .btn-outline-info:hover {
-            background: rgba(201,161,92,0.14); color: #C9A15C; border-color: #C9A15C;
+            background: rgba(27,67,50,0.08); color: var(--stripe); border-color: var(--stripe);
         }
-        .btn-close { filter: invert(1) brightness(0.7); }
+        /* 모달 헤더가 전부 초록 띠 배경이라 기본(검정) 아이콘이 안 보인다 */
+        .btn-close { filter: invert(1) brightness(2); }
 
-        /* 키보드 탐색 시 버튼/링크의 포커스 위치 표시. Bootstrap 기본 포커스 링이
-           어두운 배경에서 거의 안 보여서 별도로 그린다. 입력창은 자체 글로우
-           (.form-control:focus)가 이미 충분히 보여서 여기서 다시 겹치지 않는다. */
+        /* 키보드 탐색 시 버튼/링크의 포커스 위치 표시. */
         .btn:focus-visible, a:focus-visible {
-            outline: 2px solid var(--primary);
+            outline: 2px solid var(--focus);
             outline-offset: 2px;
         }
 
-        /* btn-check (asset type radio) */
+        /* btn-check (자산 유형 라디오) */
         .btn-check:checked + .btn-outline-secondary {
-            background: rgba(255,255,255,0.15); color: white; border-color: rgba(255,255,255,0.4);
+            background: #f0ede2; color: var(--ink); border-color: var(--line-strong);
         }
         .btn-check:checked + .btn-outline-success {
-            background: rgba(111,174,140,0.22); color: var(--success); border-color: var(--success);
+            background: rgba(27,67,50,0.12); color: var(--income); border-color: var(--income);
         }
         .btn-check:checked + .btn-outline-warning {
-            background: rgba(253,203,110,0.22); color: #fdcb6e; border-color: #fdcb6e;
+            background: rgba(181,101,46,0.14); color: #B5652E; border-color: #B5652E;
         }
 
         /* ── Calendar ── */
         .calendar-grid {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
-            gap: 5px;
+            gap: 1px;
+            background: var(--line);
+            border: 1px solid var(--line);
         }
         .calendar-day {
-            height: 120px;
-            border-radius: 14px;
-            background: rgba(201,161,92,0.03) !important;
-            border: 1px solid rgba(201,161,92,0.09) !important;
+            height: 110px;
+            border-radius: 0;
+            background: #FBF9F3 !important;
+            border: none !important;
             position: relative;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: background-color 0.15s;
         }
         .calendar-day:hover {
-            background: rgba(201,161,92,0.09) !important;
-            border-color: rgba(201,161,92,0.22) !important;
+            background: #f0ede2 !important;
         }
-        /* 그 달의 최고 지출일 대비 상대적으로 많이 쓴 날은 배경이 짙어진다.
-           숫자를 훑지 않아도 한 달의 소비 패턴이 한눈에 들어오게 하기 위함. */
-        .calendar-day.day-medium { background: rgba(217,105,91,0.09) !important; }
-        .calendar-day.day-heavy  { background: rgba(217,105,91,0.20) !important; }
+        /* 그 달의 최고 지출일 대비 상대적으로 많이 쓴 날은 배경이 짙어진다. */
+        .calendar-day.day-medium { background: rgba(122,46,34,0.08) !important; }
+        .calendar-day.day-heavy  { background: rgba(122,46,34,0.16) !important; }
         /* 오늘까지 지출이 전혀 없었던 날은 작은 점으로 표시한다 */
         .calendar-day.day-quiet::after {
             content: '';
@@ -302,122 +288,98 @@
             bottom: 13px; left: 15px;
             width: 5px; height: 5px;
             border-radius: 50%;
-            background: rgba(111,174,140,0.6);
+            background: var(--income);
+            opacity: 0.55;
         }
         .calendar-day.selected {
-            border: 2px solid var(--primary) !important;
-            background: rgba(201,161,92,0.16) !important;
-            box-shadow: 0 0 22px rgba(201,161,92,0.32);
+            box-shadow: inset 0 0 0 2px var(--stripe);
+            background: rgba(27,67,50,0.08) !important;
         }
         .calendar-day .date { position: absolute; top: 10px; left: 13px; font-weight: 700; }
-        .calendar-day .amount { position: absolute; bottom: 10px; right: 11px; font-size: 0.82rem; font-weight: 600; }
-        .expense-text { color: var(--danger); }
-        .income-text  { color: var(--success); }
+        .calendar-day .amount {
+            position: absolute; bottom: 10px; right: 11px;
+            font-family: var(--font-mono); font-size: 0.78rem; font-weight: 600;
+        }
+        .expense-text { color: var(--expense); }
+        .income-text  { color: var(--income); }
 
         /* ── Table ── */
         .table {
             --bs-table-bg: transparent;
-            --bs-table-color: var(--text);
-            --bs-table-border-color: rgba(201,161,92,0.08);
-            --bs-table-hover-bg: rgba(201,161,92,0.06);
-            --bs-table-hover-color: var(--text);
-            --bs-table-striped-bg: rgba(201,161,92,0.03);
-            color: var(--text);
+            --bs-table-color: var(--ink);
+            --bs-table-border-color: var(--line);
+            --bs-table-hover-bg: rgba(27,67,50,0.04);
+            --bs-table-hover-color: var(--ink);
+            --bs-table-striped-bg: rgba(0,0,0,0.015);
+            color: var(--ink);
         }
         .table thead th {
-            background: rgba(201,161,92,0.06);
-            border-color: rgba(201,161,92,0.12);
-            color: var(--text-sub);
-            font-weight: 500;
+            background: transparent;
+            border-bottom: 1px solid var(--line-strong) !important;
+            border-top: none;
+            color: var(--ink-sub);
+            font-weight: 600;
+            font-size: 0.78rem;
             letter-spacing: 0.03em;
         }
-        .table td, .table th { border-color: rgba(201,161,92,0.06); vertical-align: middle; }
+        .table td, .table th { border-color: var(--line); border-style: dotted; vertical-align: middle; }
+        .table thead th { border-style: solid; }
         .table > :not(caption) > * > * { background-color: transparent; }
+        .table td.text-end, .table .amount-cell { font-family: var(--font-mono); }
 
         /* ── Badges ── */
         .badge.bg-light {
-            background: rgba(255,255,255,0.15) !important;
-            color: rgba(255,255,255,0.9) !important;
+            background: #f0ede2 !important;
+            color: var(--ink) !important;
         }
-        /* Bootstrap 기본 배지 색(선명한 적/녹)이 새 톤과 어긋나서 맞춰준다 */
-        .badge.bg-danger  { background: var(--danger) !important; }
-        .badge.bg-success { background: var(--success) !important; }
+        .badge.bg-danger  { background: var(--expense) !important; }
+        .badge.bg-success { background: var(--income) !important; }
 
         /* ── List group ── */
         .list-group-item {
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.08);
-            color: var(--text);
+            background: #FBF9F3;
+            border: 1px solid var(--line);
+            color: var(--ink);
         }
-        .list-group-item + .list-group-item { border-top-color: rgba(255,255,255,0.06); }
+        .list-group-item + .list-group-item { border-top-color: var(--line); }
 
         /* ── Progress ── */
         .progress {
-            background: rgba(255,255,255,0.08);
-            border-radius: 10px;
+            background: #f0ede2;
+            border-radius: var(--radius);
             height: 20px;
         }
-        .progress-bar.bg-info    { background: linear-gradient(90deg, #C9A15C, #E8C989) !important; }
-        .progress-bar.bg-warning { background: linear-gradient(90deg, #fdcb6e, #e17055) !important; }
-        .progress-bar.bg-danger  { background: linear-gradient(90deg, #D9695B, #A83F30) !important; }
+        .progress-bar.bg-info    { background: var(--income) !important; }
+        .progress-bar.bg-warning { background: #B5652E !important; }
+        .progress-bar.bg-danger  { background: var(--expense) !important; }
 
         /* ── Modals ── */
         .modal-content {
-            background: rgba(26, 22, 19, 0.94);
-            backdrop-filter: blur(32px);
-            -webkit-backdrop-filter: blur(32px);
-            border: 1px solid rgba(201,161,92,0.16);
-            border-radius: 20px;
-            color: var(--text);
-            box-shadow: 0 24px 64px rgba(0,0,0,0.7);
+            background: var(--bg);
+            border: 1px solid var(--line-strong);
+            border-radius: var(--radius);
+            color: var(--ink);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.25);
         }
-        .modal-header { border-bottom: 1px solid rgba(201,161,92,0.12); }
-        .modal-footer { border-top:   1px solid rgba(201,161,92,0.12); }
+        .modal-header { background: var(--stripe); color: var(--stripe-text); border-bottom: none; }
+        .modal-header .modal-title { color: var(--stripe-text); }
+        .modal-footer { border-top: 1px solid var(--line); }
 
         /* ── Text & utility overrides ── */
-        .text-muted   { color: var(--text-sub) !important; }
-        .text-secondary { color: rgba(214,203,182,0.7) !important; }
-        .text-danger  { color: var(--danger) !important; }
+        .text-muted   { color: var(--ink-sub) !important; }
+        .text-secondary { color: var(--ink-sub) !important; }
+        .text-danger  { color: var(--expense) !important; }
         body.read-only-mode .owner-only { display: none !important; }
-        .text-success { color: var(--success) !important; }
-        .text-primary { color: #E8C989 !important; }
-        .text-dark    { color: var(--text)  !important; }
-        .bg-light     { background: rgba(201,161,92,0.07) !important; }
-        .border       { border-color: rgba(201,161,92,0.14) !important; }
-        hr            { border-color: rgba(201,161,92,0.1); }
+        .text-success { color: var(--income) !important; }
+        .text-primary { color: var(--stripe) !important; }
+        .text-dark    { color: var(--ink)  !important; }
+        .bg-light     { background: #f0ede2 !important; }
+        .border       { border-color: var(--line-strong) !important; }
+        hr            { border-color: var(--line); }
 
-        /* ── 저장 도장 효과 ── */
-        /* 새 내역을 저장해도 지금까진 폼이 비워지는 것 말고는 아무 반응이 없었다.
-           저장 버튼 위에 도장이 찍히듯 짧게 나타났다 사라지게 해서 "기록됐다"는
-           확인을 준다. prefers-reduced-motion에서는 상단의 전역 규칙이 지속시간을
-           강제로 줄여서 이 효과도 자동으로 거의 순간적인 표시로 바뀐다. */
-        .save-stamp-wrap { position: relative; }
-        .save-stamp {
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%) scale(2.2) rotate(-14deg);
-            opacity: 0;
-            pointer-events: none;
-            font-weight: 700;
-            font-size: 0.95rem;
-            letter-spacing: 0.04em;
-            color: #E8C989;
-            border: 2px solid #E8C989;
-            border-radius: 8px;
-            padding: 5px 16px;
-            background: rgba(20, 17, 13, 0.88);
-            z-index: 5;
-        }
-        .save-stamp.show {
-            animation: stampHit 700ms cubic-bezier(0.22, 1.6, 0.4, 1) forwards;
-        }
-        @keyframes stampHit {
-            0%   { transform: translate(-50%, -50%) scale(2.2) rotate(-16deg); opacity: 0; }
-            35%  { transform: translate(-50%, -50%) scale(0.92) rotate(-4deg); opacity: 1; }
-            55%  { transform: translate(-50%, -50%) scale(1.05) rotate(-6deg); opacity: 1; }
-            80%  { transform: translate(-50%, -50%) scale(1) rotate(-5deg); opacity: 1; }
-            100% { transform: translate(-50%, -50%) scale(1) rotate(-5deg); opacity: 0; }
-        }
+        /* 금액이 들어가는 큰 숫자에 통장 인자 느낌의 모노스페이스를 부여해
+           본문 글자와 위계를 나눈다. */
+        .amount-num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 
         /* ── Layout helpers ── */
         .account-list-item { gap: 12px; }
@@ -465,68 +427,52 @@
 
 <div class="container">
     <!-- 0. 커플 목표 -->
-    <div class="alert alert-info d-flex justify-content-between align-items-center mb-4 shadow-sm" style="border-radius: 15px; background-color: #eef2ff; border-color: #c7d2fe;">
+    <div class="alert alert-info d-flex justify-content-between align-items-center mb-4">
         <div id="coupleGoalDisplay" class="fw-bold fs-5 text-primary" style="letter-spacing: -0.5px;">🎯 우리의 목표: </div>
         <button class="btn btn-sm btn-primary text-white owner-only" onclick="editGoal()">목표 설정</button>
     </div>
     <!-- 이번 달 지출을 지난달과 비교해 한 줄로 해석해준다. 숫자만 보여주지 않고
          "잘 하고 있나"에 바로 답하기 위함 -->
     <div class="text-center mb-4" style="margin-top: -14px;">
-        <span id="monthlySummaryLine" style="font-size: 0.88rem; color: var(--text-sub); letter-spacing: -0.1px;"></span>
+        <span id="monthlySummaryLine" style="font-size: 0.88rem; letter-spacing: -0.1px;"></span>
     </div>
 
-    <!-- 1. 자산 및 주식 현황 -->
-    <div class="row mb-4">
-        <div class="col-md-4">
-            <div class="card balance-card h-100">
-                <div class="card-body">
-                    <h5 class="card-title">💰 현재 총 자산</h5>
-                    <h2 id="totalAsset">0원</h2>
-                    <p class="mb-0">등록된 자산 계좌 잔액 합계</p>
-                    <hr class="border-light opacity-50 my-2">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <input type="month" id="saveAssetMonth" class="form-control form-control-sm text-center" style="max-width: 120px; font-size: 0.85rem;">
-                        <button class="btn btn-sm btn-light text-primary fw-bold ms-2 owner-only" style="font-size: 0.85rem;" onclick="saveCurrentTotalAsset()">이 달의 자산으로 기록</button>
-                    </div>
+    <!-- 1. 자산 및 주식 현황: 통장처럼 한 줄에 괘선으로 구획을 나눈다 -->
+    <div class="assets-ledger">
+        <div class="asset-block">
+            <div class="a-label">💰 현재 총 자산</div>
+            <div class="a-num" id="totalAsset">0원</div>
+            <div class="a-sub">등록된 자산 계좌 잔액 합계</div>
+            <hr style="border-color: var(--line); opacity: 1; margin: 10px 0;">
+            <div class="d-flex align-items-center justify-content-between">
+                <input type="month" id="saveAssetMonth" class="form-control form-control-sm text-center" style="max-width: 120px; font-size: 0.85rem;">
+                <button class="btn btn-sm btn-secondary fw-bold ms-2 owner-only" style="font-size: 0.85rem;" onclick="saveCurrentTotalAsset()">이 달의 자산으로 기록</button>
+            </div>
+        </div>
+        <div class="asset-block clickable" onclick="openAccountManager('stock')" title="클릭하여 계좌 관리">
+            <div class="a-label">📈 주식/투자 자산 <small style="font-size:0.85em">(클릭 관리)</small></div>
+            <div class="a-num" id="stockAssetDisplay">0원</div>
+            <div class="a-sub" id="stockAccountCount">* 등록된 계좌: 0개</div>
+            <div class="a-sub" id="priceUpdateStatus">시세 업데이트 전</div>
+            <div id="investReturnInfo" style="display:none; margin-top:8px; border-top:1px dotted var(--line); padding-top:8px;">
+                <div class="d-flex justify-content-between" style="font-size:0.82rem;">
+                    <span class="a-sub" style="margin:0;">원금</span>
+                    <span class="amount-num" id="investPrincipal">0원</span>
+                </div>
+                <div class="d-flex justify-content-between" style="font-size:0.82rem;">
+                    <span class="a-sub" style="margin:0;">평가손익</span>
+                    <span class="amount-num" id="investProfit">0원</span>
+                </div>
+                <div class="d-flex justify-content-between fw-bold" style="font-size:0.88rem; margin-top:2px;">
+                    <span>수익률</span>
+                    <span class="amount-num" id="investReturnRate">0%</span>
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="card stock-card h-100" onclick="openAccountManager('stock')" style="cursor: pointer;" title="클릭하여 계좌 관리">
-                <div class="card-body">
-                    <h5 class="card-title">📈 주식/투자 자산 <small style="font-size:0.6em">(클릭 관리)</small></h5>
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h3 id="stockAssetDisplay">0원</h3>
-                    </div>
-                    <small id="stockAccountCount">* 등록된 계좌: 0개</small>
-                    <br><small id="priceUpdateStatus">시세 업데이트 전</small>
-                    <div id="investReturnInfo" style="display:none; margin-top:8px; border-top:1px solid rgba(255,255,255,0.4); padding-top:8px;">
-                        <div class="d-flex justify-content-between" style="font-size:0.82rem;">
-                            <span>원금</span>
-                            <span id="investPrincipal">0원</span>
-                        </div>
-                        <div class="d-flex justify-content-between" style="font-size:0.82rem;">
-                            <span>평가손익</span>
-                            <span id="investProfit">0원</span>
-                        </div>
-                        <div class="d-flex justify-content-between fw-bold" style="font-size:0.88rem; margin-top:2px;">
-                            <span>수익률</span>
-                            <span id="investReturnRate">0%</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card savings-card h-100" onclick="openAccountManager('savings')" style="cursor: pointer;" title="클릭하여 계좌 관리">
-                <div class="card-body">
-                    <h5 class="card-title">🏦 예적금 자산 <small style="font-size:0.6em">(클릭 관리)</small></h5>
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h3 id="savingsAssetDisplay">0원</h3>
-                    </div>
-                    <small id="savingsAccountCount">* 등록된 계좌: 0개</small>
-                </div>
-            </div>
+        <div class="asset-block clickable" onclick="openAccountManager('savings')" title="클릭하여 계좌 관리">
+            <div class="a-label">🏦 예적금 자산 <small style="font-size:0.85em">(클릭 관리)</small></div>
+            <div class="a-num" id="savingsAssetDisplay">0원</div>
+            <div class="a-sub" id="savingsAccountCount">* 등록된 계좌: 0개</div>
         </div>
     </div>
 
@@ -559,7 +505,7 @@
             </div>
             
             <div class="col-12 d-flex justify-content-center" id="excludeBudgetArea">
-                <div class="form-check" style="padding: 6px 14px; background: rgba(255,255,255,0.05); border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); display: inline-flex; align-items: center; gap: 8px;">
+                <div class="form-check" style="padding: 6px 14px; background: #f0ede2; border-radius: 4px; border: 1px solid var(--line); display: inline-flex; align-items: center; gap: 8px;">
                     <input class="form-check-input mt-0" type="checkbox" id="excludeFromBudget">
                     <label class="form-check-label text-muted small" for="excludeFromBudget" style="font-size: 0.82rem;">
                         월수입 배분 잔액에서 제외
@@ -567,10 +513,7 @@
                 </div>
             </div>
             <div class="col-12">
-                <div class="save-stamp-wrap">
-                    <button type="submit" class="btn btn-primary w-100" id="saveBtn">저장하기</button>
-                    <span class="save-stamp" id="saveStamp">✓ 기록완료</span>
-                </div>
+                <button type="submit" class="btn btn-primary w-100" id="saveBtn">저장하기</button>
                 <button type="button" class="btn btn-secondary w-100 mt-2" id="cancelEditBtn" style="display:none;" onclick="cancelEdit()">수정 취소</button>
             </div>
         </form>
@@ -781,7 +724,7 @@
                     <li>현재 날짜 이후 구간은 데이터가 없어서 점이 표시되지 않아요 (정상이에요).</li>
                 </ul>
 
-                <h6 class="fw-bold mb-2" style="color:#E8C989;">🏦 자산 관리</h6>
+                <h6 class="fw-bold mb-2" style="color:#1B4332;">🏦 자산 관리</h6>
                 <ul class="mb-3">
                     <li><strong>주식/투자 자산</strong>, <strong>예적금 자산</strong> 카드를 클릭하면 각 계좌를 직접 관리할 수 있어요.</li>
                     <li>시세 업데이트 버튼으로 주식·금 시세를 실시간 반영해요.</li>
@@ -1824,6 +1767,9 @@
             excludeFromBudget: excludeFromBudget
         };
 
+        const expenseEl = document.getElementById('monthExpense');
+        const prevExpenseValue = expenseEl ? (parseInt(expenseEl.textContent.replace(/[^\d-]/g, ''), 10) || 0) : 0;
+
         transactions.push(newTransaction);
         saveData();
         pushNewTransaction(newTransaction).catch(err => alert('서버 저장에 실패했습니다. 다시 시도해주세요.\n' + err.message));
@@ -1836,18 +1782,31 @@
             e.target.reset();
             document.getElementById('date').valueAsDate = new Date();
             document.getElementById('excludeFromBudget').checked = false;
-            showSaveStamp();
+
+            // 저장해도 폼이 조용히 비워지기만 하던 것 대신, 이번 달 지출 숫자가
+            // 계산기처럼 이전 값에서 새 값으로 굴러가며 바뀌게 해서 "기록됐다"는
+            // 확인을 준다. 다른 달 날짜로 저장해 이번 달 지출이 그대로면 애니메이션
+            // 없이 바로 새 값이 보인다 (아래 함수가 값이 같으면 굴리지 않음).
+            if (expenseEl) {
+                const newExpenseValue = parseInt(expenseEl.textContent.replace(/[^\d-]/g, ''), 10) || 0;
+                animateNumberRoll(expenseEl, prevExpenseValue, newExpenseValue, '원');
+            }
         }
     });
 
-    // 새 내역 저장 시 도장이 찍히는 듯한 짧은 효과. 폼이 조용히 비워지기만
-    // 하던 저장 버튼에 "기록됐다"는 확인을 준다.
-    function showSaveStamp() {
-        const stamp = document.getElementById('saveStamp');
-        if (!stamp) return;
-        stamp.classList.remove('show');
-        void stamp.offsetWidth; // 강제 리플로우: 같은 클래스를 다시 추가해도 애니메이션이 재생되게 함
-        stamp.classList.add('show');
+    function animateNumberRoll(el, from, to, suffix) {
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (from === to || reduceMotion) { el.textContent = to.toLocaleString() + suffix; return; }
+        const duration = 550;
+        const startTime = performance.now();
+        function step(now) {
+            const t = Math.min(1, (now - startTime) / duration);
+            const eased = 1 - Math.pow(1 - t, 3);
+            const value = Math.round(from + (to - from) * eased);
+            el.textContent = value.toLocaleString() + suffix;
+            if (t < 1) requestAnimationFrame(step);
+        }
+        requestAnimationFrame(step);
     }
 
     // 데이터 저장
@@ -2050,12 +2009,14 @@
         const prevExpense = expenseUpTo(prevMonthKey, dayCutoff);
         const diff = thisExpense - prevExpense;
 
+        // 지출이 늘었을 때만 빨간 잉크로 강조한다 ("적자"는 붉은 글씨라는 규칙 그대로).
+        // 줄었거나 같으면 강조할 이유가 없어 평범한 잉크색으로 둔다.
         if (diff === 0) {
             el.innerText = `${dayCutoff}일까지 지난달과 같은 ${thisExpense.toLocaleString()}원을 썼어요`;
         } else if (diff < 0) {
             el.innerText = `${dayCutoff}일까지 지난달보다 ${Math.abs(diff).toLocaleString()}원 덜 썼어요`;
         } else {
-            el.innerText = `${dayCutoff}일까지 지난달보다 ${diff.toLocaleString()}원 더 썼어요`;
+            el.innerHTML = `${dayCutoff}일까지 지난달보다 <b>${diff.toLocaleString()}원</b> 더 썼어요`;
         }
     }
 
@@ -2123,10 +2084,10 @@
             document.getElementById('investPrincipal').innerText = totalPrincipal.toLocaleString() + '원';
             const profitEl = document.getElementById('investProfit');
             profitEl.innerText = (totalProfit >= 0 ? '+' : '') + Math.round(totalProfit).toLocaleString() + '원';
-            profitEl.style.color = totalProfit >= 0 ? '#ffeaa7' : '#8FA6C9';
+            profitEl.style.color = totalProfit >= 0 ? '#1B4332' : '#7A2E22';
             const rateEl = document.getElementById('investReturnRate');
             rateEl.innerText = (returnRate >= 0 ? '+' : '') + returnRate.toFixed(2) + '%';
-            rateEl.style.color = returnRate >= 0 ? '#ffeaa7' : '#8FA6C9';
+            rateEl.style.color = returnRate >= 0 ? '#1B4332' : '#7A2E22';
         } else {
             returnInfoEl.style.display = 'none';
         }
@@ -2199,7 +2160,7 @@
                 labels: Object.keys(categoryExpenses),
                 datasets: [{
                     data: Object.values(categoryExpenses),
-                    backgroundColor: ['#C9A15C', '#D9695B', '#6FAE8C', '#7C93B8', '#A8789C', '#E0A458']
+                    backgroundColor: ['#1B4332', '#7A2E22', '#B5652E', '#4A5568', '#8a6c53', '#6b4226']
                 }]
             },
             options: {
@@ -2250,8 +2211,8 @@
             {
                 label: '생활비 누적',
                 data: cumulativeExpense,
-                borderColor: '#D9695B',
-                backgroundColor: 'rgba(217, 105, 91, 0.12)',
+                borderColor: '#7A2E22',
+                backgroundColor: 'rgba(122, 46, 34, 0.12)',
                 fill: true,
                 tension: 0,
                 pointRadius: 3,
@@ -2276,7 +2237,7 @@
             chartDatasets.push({
                 label: `배분 잔액 (${realBudget.toLocaleString()}원)`,
                 data: Array(daysInMonth).fill(realBudget),
-                borderColor: '#6FAE8C',
+                borderColor: '#1B4332',
                 borderDash: [6, 4],
                 borderWidth: 2,
                 pointRadius: 0,
@@ -2296,24 +2257,24 @@
                 scales: {
                     x: {
                         ticks: {
-                            color: 'rgba(216,203,180,0.65)',
+                            color: 'rgba(28,28,26,0.65)',
                             maxTicksLimit: 16,
                             font: { size: 11 }
                         },
-                        grid: { color: 'rgba(255,255,255,0.05)' }
+                        grid: { color: 'rgba(0,0,0,0.06)' }
                     },
                     y: {
                         beginAtZero: true,
                         ticks: {
-                            color: 'rgba(216,203,180,0.65)',
+                            color: 'rgba(28,28,26,0.65)',
                             callback: v => v >= 10000 ? `${Math.round(v / 10000)}만` : v.toLocaleString()
                         },
-                        grid: { color: 'rgba(255,255,255,0.06)' }
+                        grid: { color: 'rgba(0,0,0,0.08)' }
                     }
                 },
                 plugins: {
                     legend: {
-                        labels: { color: 'rgba(216,203,180,0.85)', boxWidth: 14 }
+                        labels: { color: 'rgba(28,28,26,0.85)', boxWidth: 14 }
                     },
                     tooltip: {
                         callbacks: {
@@ -2398,12 +2359,12 @@
                     {
                         label: '수입',
                         data: monthlyIncome,
-                        backgroundColor: '#4F8E6E'
+                        backgroundColor: '#1B4332'
                     },
                     {
                         label: '지출',
                         data: monthlyExpense,
-                        backgroundColor: '#A83F30'
+                        backgroundColor: '#7A2E22'
                     }
                 ]
             },
@@ -2471,8 +2432,8 @@
                     type: 'line',
                     label: '총 자산 추이 (기록됨)',
                     data: monthlyAssets,
-                    borderColor: '#C9A15C',
-                    backgroundColor: 'rgba(201, 161, 92, 0.12)',
+                    borderColor: '#1B4332',
+                    backgroundColor: 'rgba(27, 67, 50, 0.12)',
                     borderWidth: 2,
                     fill: true,
                     tension: 0.3,
@@ -2483,7 +2444,7 @@
                     type: 'bar',
                     label: '월별 수입',
                     data: monthlyIncomes,
-                    backgroundColor: 'rgba(111, 174, 140, 0.6)',
+                    backgroundColor: 'rgba(27, 67, 50, 0.6)',
                     borderRadius: 4,
                     yAxisID: 'y1'
                 },
@@ -2491,7 +2452,7 @@
                     type: 'bar',
                     label: '월별 지출',
                     data: monthlyExpenses,
-                    backgroundColor: 'rgba(217, 105, 91, 0.6)',
+                    backgroundColor: 'rgba(122, 46, 34, 0.6)',
                     borderRadius: 4,
                     yAxisID: 'y1'
                 }]
