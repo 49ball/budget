@@ -1,0 +1,464 @@
+<title>가계부 구조 비교안</title>
+<style>
+  :root {
+    color-scheme: light dark;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #15161a;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif;
+  }
+  .intro {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 48px 24px 32px;
+    color: #cfd2da;
+  }
+  .intro h1 {
+    color: #f2f3f6;
+    font-size: 1.5rem;
+    margin: 0 0 12px;
+    text-wrap: balance;
+  }
+  .intro p {
+    line-height: 1.7;
+    font-size: 0.95rem;
+    margin: 0 0 10px;
+    color: #b7bac2;
+  }
+  .intro .key {
+    color: #f2f3f6;
+    font-weight: 600;
+  }
+
+  .world {
+    position: relative;
+    padding: 56px 24px 64px;
+  }
+  .world-label {
+    max-width: 920px;
+    margin: 0 auto 28px;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .world-label .tag {
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 3px;
+  }
+  .world-label .name {
+    font-size: 1.15rem;
+    font-weight: 700;
+  }
+  .world-label .sub {
+    font-size: 0.85rem;
+    opacity: 0.7;
+  }
+
+  .frame {
+    max-width: 920px;
+    margin: 0 auto;
+  }
+
+  /* ============================================================
+     방향 A — 초록 괘선 장부 (라이트)
+     흑자/적자라는 말 자체가 "검은 글씨/붉은 글씨"에서 나왔다는 데서 출발.
+     그래서 수입엔 별도 색을 안 주고 기본 잉크색 그대로, 지출만 붉은 잉크로
+     표시한다. 카드 대신 실제 장부처럼 가로 괘선으로 구획을 나누고,
+     왼쪽엔 회계장부에 흔한 세로 여백선(붉은 줄)을 둔다.
+     ============================================================ */
+  .world-a {
+    background: #EEF0E1;
+    color: #232A22;
+  }
+  .world-a .world-label .tag { background: #B23A2E; color: #F6EFE4; }
+  .world-a .world-label .name { color: #232A22; }
+  .world-a .world-label .sub { color: #5B6B58; }
+
+  .world-a .frame {
+    position: relative;
+    padding: 0 0 0 28px;
+    border-left: 2px solid #C9847A;
+  }
+  .world-a .ledger-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin: 0 0 4px;
+  }
+  .world-a .ledger-sub {
+    font-size: 0.86rem;
+    color: #5B6B58;
+    margin: 0 0 22px;
+  }
+  .world-a .ledger-sub b { color: #B23A2E; font-weight: 700; }
+
+  .world-a .row-rule {
+    border-top: 1px solid #B9C4A9;
+    padding-top: 18px;
+    margin-top: 18px;
+  }
+
+  .world-a .assets {
+    display: flex;
+    gap: 0;
+  }
+  .world-a .asset {
+    flex: 1;
+    padding: 4px 20px;
+    border-left: 1px solid #C6CFB9;
+  }
+  .world-a .asset:first-child { padding-left: 0; border-left: none; }
+  .world-a .asset .label {
+    font-size: 0.78rem;
+    color: #5B6B58;
+    margin-bottom: 6px;
+  }
+  .world-a .asset .num {
+    font-family: ui-monospace, "SF Mono", "Cascadia Mono", "JetBrains Mono", Consolas, monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 1.32rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  .world-a .calendar-strip {
+    display: flex;
+    gap: 1px;
+    background: #C6CFB9;
+    border: 1px solid #C6CFB9;
+    margin-top: 6px;
+  }
+  .world-a .day {
+    flex: 1;
+    background: #F6F7EC;
+    padding: 10px 8px;
+    min-height: 62px;
+    position: relative;
+  }
+  .world-a .day .d { font-size: 0.76rem; color: #5B6B58; }
+  .world-a .day .amt {
+    font-family: ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 0.78rem;
+    position: absolute; bottom: 8px; right: 8px;
+  }
+  .world-a .day.heavy { background: #EAD3CE; }
+  .world-a .day.heavy .amt { color: #B23A2E; font-weight: 700; }
+  .world-a .day.quiet::after {
+    content: '';
+    position: absolute; bottom: 9px; left: 9px;
+    width: 4px; height: 4px; border-radius: 50%;
+    background: #7A9278;
+  }
+
+  .world-a table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.86rem;
+  }
+  .world-a table th {
+    text-align: left;
+    font-weight: 600;
+    color: #5B6B58;
+    font-size: 0.74rem;
+    letter-spacing: 0.03em;
+    border-bottom: 1px solid #B9C4A9;
+    padding: 6px 10px 6px 0;
+  }
+  .world-a table td {
+    border-bottom: 1px solid #DCE1CF;
+    padding: 9px 10px 9px 0;
+  }
+  .world-a table td.num {
+    font-family: ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    color: #B23A2E;
+    font-weight: 600;
+  }
+
+  .world-a .save-btn {
+    font-family: inherit;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #F6EFE4;
+    background: #232A22;
+    border: none;
+    padding: 12px 18px;
+    cursor: pointer;
+    letter-spacing: 0.01em;
+  }
+  .world-a .save-btn:hover { background: #333d2f; }
+  .world-a .save-btn:focus-visible { outline: 2px solid #B23A2E; outline-offset: 3px; }
+  .world-a .stamp-note {
+    font-size: 0.78rem;
+    color: #5B6B58;
+    margin-top: 8px;
+  }
+
+  /* ============================================================
+     방향 B — 분필 칠판 장부 (다크)
+     유리블러·그라데이션 없이 평평한 슬레이트. 분필로 쓴 흔적처럼
+     선은 점선으로, 숫자는 여전히 모노스페이스(통장 인자 느낌)로.
+     황동/보라 같은 "브랜드 액센트"는 없고, 지출만 분필 빨강으로 튄다.
+     ============================================================ */
+  .world-b {
+    background: #24272A;
+    color: #ECEAE3;
+  }
+  .world-b .world-label .tag { background: #E08A78; color: #24272A; }
+  .world-b .world-label .name { color: #ECEAE3; }
+  .world-b .world-label .sub { color: #A9ADA6; }
+
+  .world-b .ledger-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin: 0 0 4px;
+  }
+  .world-b .ledger-sub {
+    font-size: 0.86rem;
+    color: #A9ADA6;
+    margin: 0 0 22px;
+  }
+  .world-b .ledger-sub b { color: #E08A78; font-weight: 700; }
+
+  .world-b .row-rule {
+    border-top: 1px dashed rgba(236,234,227,0.28);
+    padding-top: 18px;
+    margin-top: 18px;
+  }
+
+  .world-b .assets {
+    display: flex;
+    gap: 0;
+  }
+  .world-b .asset {
+    flex: 1;
+    padding: 4px 20px;
+    border-left: 1px dashed rgba(236,234,227,0.22);
+  }
+  .world-b .asset:first-child { padding-left: 0; border-left: none; }
+  .world-b .asset .label {
+    font-size: 0.78rem;
+    color: #A9ADA6;
+    margin-bottom: 6px;
+  }
+  .world-b .asset .num {
+    font-family: ui-monospace, "SF Mono", "Cascadia Mono", "JetBrains Mono", Consolas, monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 1.32rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  .world-b .calendar-strip {
+    display: flex;
+    gap: 1px;
+    background: rgba(236,234,227,0.14);
+    border: 1px dashed rgba(236,234,227,0.22);
+    margin-top: 6px;
+  }
+  .world-b .day {
+    flex: 1;
+    background: #24272A;
+    padding: 10px 8px;
+    min-height: 62px;
+    position: relative;
+  }
+  .world-b .day .d { font-size: 0.76rem; color: #A9ADA6; }
+  .world-b .day .amt {
+    font-family: ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 0.78rem;
+    position: absolute; bottom: 8px; right: 8px;
+    color: #ECEAE3;
+  }
+  .world-b .day.heavy { background: #3A2E2C; }
+  .world-b .day.heavy .amt { color: #E08A78; font-weight: 700; }
+  .world-b .day.quiet::after {
+    content: '';
+    position: absolute; bottom: 9px; left: 9px;
+    width: 4px; height: 4px; border-radius: 50%;
+    background: #8FA9A0;
+  }
+
+  .world-b table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.86rem;
+  }
+  .world-b table th {
+    text-align: left;
+    font-weight: 600;
+    color: #A9ADA6;
+    font-size: 0.74rem;
+    letter-spacing: 0.03em;
+    border-bottom: 1px dashed rgba(236,234,227,0.28);
+    padding: 6px 10px 6px 0;
+  }
+  .world-b table td {
+    border-bottom: 1px dashed rgba(236,234,227,0.14);
+    padding: 9px 10px 9px 0;
+    color: #ECEAE3;
+  }
+  .world-b table td.num {
+    font-family: ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    color: #E08A78;
+    font-weight: 600;
+  }
+
+  .world-b .save-btn {
+    font-family: inherit;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #24272A;
+    background: #ECEAE3;
+    border: none;
+    padding: 12px 18px;
+    cursor: pointer;
+    letter-spacing: 0.01em;
+  }
+  .world-b .save-btn:hover { background: #d9d7ce; }
+  .world-b .save-btn:focus-visible { outline: 2px solid #E08A78; outline-offset: 3px; }
+  .world-b .stamp-note {
+    font-size: 0.78rem;
+    color: #A9ADA6;
+    margin-top: 8px;
+  }
+
+  @media (max-width: 640px) {
+    .world-a .assets, .world-b .assets { flex-direction: column; gap: 14px; }
+    .world-a .asset, .world-b .asset { border-left: none !important; padding-left: 0 !important; }
+    .world-a .calendar-strip, .world-b .calendar-strip { overflow-x: auto; }
+  }
+</style>
+
+<div class="intro">
+  <h1>구조부터 다시 — 두 방향 비교</h1>
+  <p>둘 다 <span class="key">"흑자/적자"라는 말 자체가 검은 글씨·붉은 글씨에서 나왔다</span>는 데서 출발했어. 그래서 수입엔 따로 색을 안 주고 기본 잉크색 그대로 두고, <span class="key">지출만 붉은 잉크로 튀게</span> 했어. "포인트색 변수 하나"가 아니라 이 규칙 하나로 색이 정해져.</p>
+  <p>카드도 없앴어. 유리블러·그림자 대신 <span class="key">실제 장부처럼 괘선으로 구획</span>을 나눴고, 금액 숫자만 통장 인자 느낌의 모노스페이스체로 따로 세워서 위계를 줬어.</p>
+</div>
+
+<div class="world world-a">
+  <div class="world-label">
+    <span class="tag">방향 A</span>
+    <span class="name">초록 괘선 장부</span>
+    <span class="sub">라이트 · 회계장부 괘지 + 붉은 여백선</span>
+  </div>
+  <div class="frame">
+    <div class="ledger-title">🎯 7월 목표: 지출보다 수입이 크기</div>
+    <div class="ledger-sub">31일까지 지난달보다 <b>184,247원</b> 더 썼어요</div>
+
+    <div class="assets">
+      <div class="asset">
+        <div class="label">현재 총 자산</div>
+        <div class="num">103,350,703원</div>
+      </div>
+      <div class="asset">
+        <div class="label">주식 · 투자 자산</div>
+        <div class="num">84,840,828원</div>
+      </div>
+      <div class="asset">
+        <div class="label">예적금 자산</div>
+        <div class="num">18,509,875원</div>
+      </div>
+    </div>
+
+    <div class="row-rule">
+      <div class="calendar-strip">
+        <div class="day"><span class="d">8</span></div>
+        <div class="day quiet"><span class="d">9</span></div>
+        <div class="day"><span class="d">10</span><span class="amt">-5,000</span></div>
+        <div class="day"><span class="d">11</span><span class="amt">-15.1만</span></div>
+        <div class="day heavy"><span class="d">24</span><span class="amt">-232.4만</span></div>
+        <div class="day"><span class="d">25</span><span class="amt">-33.5만</span></div>
+        <div class="day quiet"><span class="d">30</span></div>
+      </div>
+    </div>
+
+    <div class="row-rule">
+      <table>
+        <thead><tr><th>날짜</th><th>분류</th><th>내용</th><th style="text-align:right;">금액</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>07-11</td><td>의료비</td><td>안과 검진비용</td>
+            <td class="num">-100,000원</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="row-rule">
+      <button class="save-btn">저장하기</button>
+      <div class="stamp-note">누르면 이 옆에 "✓ 기록완료" 도장이 짧게 찍혀요</div>
+    </div>
+  </div>
+</div>
+
+<div class="world world-b">
+  <div class="world-label">
+    <span class="tag">방향 B</span>
+    <span class="name">분필 칠판 장부</span>
+    <span class="sub">다크 · 슬레이트 + 점선 괘선, 블러·그라데이션 없음</span>
+  </div>
+  <div class="frame">
+    <div class="ledger-title">🎯 7월 목표: 지출보다 수입이 크기</div>
+    <div class="ledger-sub">31일까지 지난달보다 <b>184,247원</b> 더 썼어요</div>
+
+    <div class="assets">
+      <div class="asset">
+        <div class="label">현재 총 자산</div>
+        <div class="num">103,350,703원</div>
+      </div>
+      <div class="asset">
+        <div class="label">주식 · 투자 자산</div>
+        <div class="num">84,840,828원</div>
+      </div>
+      <div class="asset">
+        <div class="label">예적금 자산</div>
+        <div class="num">18,509,875원</div>
+      </div>
+    </div>
+
+    <div class="row-rule">
+      <div class="calendar-strip">
+        <div class="day"><span class="d">8</span></div>
+        <div class="day quiet"><span class="d">9</span></div>
+        <div class="day"><span class="d">10</span><span class="amt">-5,000</span></div>
+        <div class="day"><span class="d">11</span><span class="amt">-15.1만</span></div>
+        <div class="day heavy"><span class="d">24</span><span class="amt">-232.4만</span></div>
+        <div class="day"><span class="d">25</span><span class="amt">-33.5만</span></div>
+        <div class="day quiet"><span class="d">30</span></div>
+      </div>
+    </div>
+
+    <div class="row-rule">
+      <table>
+        <thead><tr><th>날짜</th><th>분류</th><th>내용</th><th style="text-align:right;">금액</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>07-11</td><td>의료비</td><td>안과 검진비용</td>
+            <td class="num">-100,000원</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="row-rule">
+      <button class="save-btn">저장하기</button>
+      <div class="stamp-note">누르면 이 옆에 "✓ 기록완료" 표시가 짧게 떠요</div>
+    </div>
+  </div>
+</div>
