@@ -281,15 +281,30 @@
         /* 그 달의 최고 지출일 대비 상대적으로 많이 쓴 날은 배경이 짙어진다. */
         .calendar-day.day-medium { background: rgba(122,46,34,0.08) !important; }
         .calendar-day.day-heavy  { background: rgba(122,46,34,0.16) !important; }
-        /* 오늘까지 지출이 전혀 없었던 날은 작은 점으로 표시한다 */
+        /* 오늘까지 지출이 전혀 없었던 날은 "참잘했어요" 도장을 찍는다.
+           빨간 잉크는 이미 "지출 늘음" 전용이라, 좋은 신호를 나타내는
+           이 도장은 수입과 같은 초록 잉크를 쓴다. 사각형 위주인 화면에서
+           원형은 여기서만 써서 "이건 진짜 도장이다"라는 게 바로 느껴지게 한다. */
         .calendar-day.day-quiet::after {
-            content: '';
+            content: '참\A잘했어요';
+            white-space: pre;
             position: absolute;
-            bottom: 13px; left: 15px;
-            width: 5px; height: 5px;
+            bottom: 8px; left: 8px;
+            width: 42px; height: 42px;
             border-radius: 50%;
-            background: var(--income);
-            opacity: 0.55;
+            border: 1.5px solid var(--income);
+            box-shadow: inset 0 0 0 3px rgba(27,67,50,0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-family: 'Noto Sans KR', -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+            font-size: 0.5rem;
+            font-weight: 700;
+            line-height: 1.3;
+            color: var(--income);
+            opacity: 0.85;
+            transform: rotate(-9deg);
         }
         .calendar-day.selected {
             box-shadow: inset 0 0 0 2px var(--stripe);
