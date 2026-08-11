@@ -328,6 +328,24 @@
             opacity: 0.85;
             transform: rotate(-9deg);
         }
+        /* 이번 달 무지출일. 날짜 개수를 도장 안에 통째로 새겨서 하나의 도장처럼 보이게 한다. */
+        #noSpendBadge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 48px; height: 48px;
+            border-radius: 50%;
+            border: 1.5px solid var(--income);
+            box-shadow: inset 0 0 0 3px rgba(27,67,50,0.15);
+            font-family: 'Noto Sans KR', -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+            font-size: 0.44rem;
+            font-weight: 700;
+            line-height: 1.25;
+            color: var(--income);
+            text-align: center;
+            transform: rotate(-9deg);
+            white-space: pre;
+        }
         .calendar-day.selected {
             box-shadow: inset 0 0 0 2px var(--stripe);
             background: rgba(27,67,50,0.08) !important;
@@ -664,7 +682,8 @@
                         <h5 class="mb-0" id="currentMonthDisplay">YYYY년 MM월</h5>
                         <button class="btn btn-outline-secondary btn-sm ms-2" onclick="changeMonth(1)"><i class="bi bi-chevron-right"></i></button>
                     </div>
-                    <div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span id="noSpendBadge" title="이번 달 무지출일"></span>
                         <span class="badge bg-success">수입: <span id="monthIncome">0</span></span>
                         <span class="badge bg-danger">지출: <span id="monthExpense">0</span></span>
                     </div>
@@ -3038,6 +3057,7 @@
         const maxDayExpense = Math.max(0, ...dayExpenses);
 
         // 날짜 채우기
+        let noSpendCount = 0;
         for(let d=1; d<=lastDate; d++) {
             const dateStr = `${year}-${String(month+1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
             const dayTransactions = data.filter(t => t.date === dateStr);
@@ -3065,6 +3085,7 @@
                 else if (ratio >= 0.25) intensityClass = 'day-medium';
             } else if (dayExpense === 0 && dateStr <= todayStr) {
                 intensityClass = 'day-quiet';
+                noSpendCount++;
             }
 
             grid.innerHTML += `
@@ -3081,6 +3102,17 @@
         const remainingCells = (7 - (totalCells % 7)) % 7;
         for(let i=0; i<remainingCells; i++) {
             grid.innerHTML += `<div class="calendar-day bg-light"></div>`;
+        }
+
+        // 이번 달 무지출일 총 개수를 도장 안에 새겨서 헤더에 표시. 하나도 없으면 숨긴다.
+        const noSpendBadge = document.getElementById('noSpendBadge');
+        if (noSpendBadge) {
+            if (noSpendCount > 0) {
+                noSpendBadge.textContent = `${noSpendCount}일 참\n잘했어요`;
+                noSpendBadge.style.display = 'inline-flex';
+            } else {
+                noSpendBadge.style.display = 'none';
+            }
         }
     }
 
