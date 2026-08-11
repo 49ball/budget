@@ -333,12 +333,12 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            width: 48px; height: 48px;
+            width: 52px; height: 52px;
             border-radius: 50%;
             border: 1.5px solid var(--income);
             box-shadow: inset 0 0 0 3px rgba(27,67,50,0.15);
             font-family: 'Noto Sans KR', -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
-            font-size: 0.44rem;
+            font-size: 0.52rem;
             font-weight: 700;
             line-height: 1.25;
             color: var(--income);
@@ -2707,7 +2707,8 @@
         // (다른 줄에서 쓰는 '지출' 총액과는 다른, 저축률 전용 정의).
         if (income > 0) {
             const expenseForSavings = monthTx.filter(t => t.type === 'expense' && t.category !== '투자손익' && t.category !== '투자금액').reduce((s, t) => s + (parseInt(t.amount) || 0), 0);
-            const savingsRate = ((income - expenseForSavings) / income) * 100;
+            const savingsAmount = income - expenseForSavings;
+            const savingsRate = (savingsAmount / income) * 100;
             const prevTx = transactions.filter(t => t.date.startsWith(prevKey));
             const prevIncome = prevTx.filter(t => t.type === 'income' && t.category !== '투자손익').reduce((s, t) => s + (parseInt(t.amount) || 0), 0);
             const prevExpenseForSavings = prevTx.filter(t => t.type === 'expense' && t.category !== '투자손익' && t.category !== '투자금액').reduce((s, t) => s + (parseInt(t.amount) || 0), 0);
@@ -2718,9 +2719,9 @@
                 const rateDiffText = Math.abs(rateDiff) < 0.05
                     ? '지난달과 비슷해요'
                     : `지난달보다 ${Math.abs(rateDiff).toFixed(1)}%p ${rateDiff > 0 ? '올랐어요' : '내렸어요'}`;
-                lines.push({ label: '저축률', text: `저축률은 <b>${savingsRate.toFixed(1)}%</b>로 ${rateDiffText}.` });
+                lines.push({ label: '저축률', text: `저축률은 <b>${savingsRate.toFixed(1)}%</b>(${formatManwon(savingsAmount)})로 ${rateDiffText}.` });
             } else {
-                lines.push({ label: '저축률', text: `저축률은 <b>${savingsRate.toFixed(1)}%</b>예요.` });
+                lines.push({ label: '저축률', text: `저축률은 <b>${savingsRate.toFixed(1)}%</b>(${formatManwon(savingsAmount)})예요.` });
             }
         }
 
