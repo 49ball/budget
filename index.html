@@ -530,6 +530,13 @@
             <div class="col-12">
                 <button type="submit" class="btn btn-primary w-100" id="saveBtn">저장하기</button>
                 <button type="button" class="btn btn-secondary w-100 mt-2" id="cancelEditBtn" style="display:none;" onclick="cancelEdit()">수정 취소</button>
+                <!-- 저장 확인 애니메이션이 뜨는 자리. 실제 "지출: N원" 배지는 차트를
+                     지나야 나오는 아래쪽에 있어 저장 직후엔 화면 밖이라 안 보였다.
+                     버튼 바로 아래에 같은 값을 항상 함께 보여주는 자리를 둬서,
+                     여길 굴러가게 한다. -->
+                <div class="text-center mt-2" style="font-size: 0.82rem; color: var(--ink-sub);">
+                    이번 달 지출 <span class="amount-num" id="saveBtnExpensePreview" style="font-weight: 700; color: var(--ink);">0원</span>
+                </div>
             </div>
         </form>
     </div>
@@ -1782,8 +1789,11 @@
             excludeFromBudget: excludeFromBudget
         };
 
-        const expenseEl = document.getElementById('monthExpense');
-        const prevExpenseValue = expenseEl ? (parseInt(expenseEl.textContent.replace(/[^\d-]/g, ''), 10) || 0) : 0;
+        // 실제 "지출: N원" 배지는 차트를 지나야 나오는 아래쪽에 있어 저장 직후엔
+        // 화면 밖이라 안 보인다. 버튼 바로 아래의 미니 표시(saveBtnExpensePreview)를
+        // 굴려서, 스크롤하지 않아도 "기록됐다"는 확인이 바로 보이게 한다.
+        const expensePreviewEl = document.getElementById('saveBtnExpensePreview');
+        const prevExpenseValue = expensePreviewEl ? (parseInt(expensePreviewEl.textContent.replace(/[^\d-]/g, ''), 10) || 0) : 0;
 
         transactions.push(newTransaction);
         saveData();
@@ -1798,13 +1808,11 @@
             document.getElementById('date').valueAsDate = new Date();
             document.getElementById('excludeFromBudget').checked = false;
 
-            // 저장해도 폼이 조용히 비워지기만 하던 것 대신, 이번 달 지출 숫자가
-            // 계산기처럼 이전 값에서 새 값으로 굴러가며 바뀌게 해서 "기록됐다"는
-            // 확인을 준다. 다른 달 날짜로 저장해 이번 달 지출이 그대로면 애니메이션
-            // 없이 바로 새 값이 보인다 (아래 함수가 값이 같으면 굴리지 않음).
-            if (expenseEl) {
-                const newExpenseValue = parseInt(expenseEl.textContent.replace(/[^\d-]/g, ''), 10) || 0;
-                animateNumberRoll(expenseEl, prevExpenseValue, newExpenseValue, '원');
+            // 다른 달 날짜로 저장해 이번 달 지출이 그대로면 애니메이션 없이
+            // 바로 새 값이 보인다 (아래 함수가 값이 같으면 굴리지 않음).
+            if (expensePreviewEl) {
+                const newExpenseValue = parseInt(expensePreviewEl.textContent.replace(/[^\d-]/g, ''), 10) || 0;
+                animateNumberRoll(expensePreviewEl, prevExpenseValue, newExpenseValue, '원');
             }
         }
     });
@@ -2119,6 +2127,10 @@
 
         document.getElementById('monthIncome').innerText = monthIncome.toLocaleString() + "원";
         document.getElementById('monthExpense').innerText = monthExpense.toLocaleString() + "원";
+        // 저장 버튼 근처의 미니 표시도 항상 같은 값으로 맞춘다 (달 이동 등 저장이
+        // 아닌 다른 렌더링에서도 최신 상태를 보여줘야 하므로).
+        const expensePreviewEl = document.getElementById('saveBtnExpensePreview');
+        if (expensePreviewEl) expensePreviewEl.innerText = monthExpense.toLocaleString() + "원";
 
         // 예산 업데이트 (배분 잔액 = 총 수입, 생활비 = 총지출 - 배분제외)
         const excludedExpenses = currentData
