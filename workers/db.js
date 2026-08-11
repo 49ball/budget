@@ -47,7 +47,7 @@ const DEFAULT_CATEGORIES = ['식비', '교통', '쇼핑', '주거/통신', '투�
 
 export async function getSettings(db, memberId) {
     const row = await db.prepare(
-        'SELECT title, accounts_json, categories_json, monthly_budgets_json, fixed_expenses_json, monthly_goals_json, monthly_assets_json FROM settings WHERE member_id = ?'
+        'SELECT title, accounts_json, categories_json, monthly_budgets_json, fixed_expenses_json, monthly_goals_json, monthly_assets_json, annual_savings_goals_json FROM settings WHERE member_id = ?'
     ).bind(memberId).first();
 
     if (!row) {
@@ -58,7 +58,8 @@ export async function getSettings(db, memberId) {
             monthlyBudgets: {},
             fixedExpenses: [],
             monthlyGoals: {},
-            monthlyAssetsData: {}
+            monthlyAssetsData: {},
+            annualSavingsGoals: {}
         };
     }
 
@@ -69,14 +70,15 @@ export async function getSettings(db, memberId) {
         monthlyBudgets: JSON.parse(row.monthly_budgets_json),
         fixedExpenses: JSON.parse(row.fixed_expenses_json),
         monthlyGoals: JSON.parse(row.monthly_goals_json),
-        monthlyAssetsData: JSON.parse(row.monthly_assets_json)
+        monthlyAssetsData: JSON.parse(row.monthly_assets_json),
+        annualSavingsGoals: JSON.parse(row.annual_savings_goals_json)
     };
 }
 
 export async function putSettings(db, memberId, settings) {
     await db.prepare(
-        `INSERT INTO settings (member_id, title, accounts_json, categories_json, monthly_budgets_json, fixed_expenses_json, monthly_goals_json, monthly_assets_json, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO settings (member_id, title, accounts_json, categories_json, monthly_budgets_json, fixed_expenses_json, monthly_goals_json, monthly_assets_json, annual_savings_goals_json, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(member_id) DO UPDATE SET
              title = excluded.title,
              accounts_json = excluded.accounts_json,
@@ -85,6 +87,7 @@ export async function putSettings(db, memberId, settings) {
              fixed_expenses_json = excluded.fixed_expenses_json,
              monthly_goals_json = excluded.monthly_goals_json,
              monthly_assets_json = excluded.monthly_assets_json,
+             annual_savings_goals_json = excluded.annual_savings_goals_json,
              updated_at = excluded.updated_at`
     ).bind(
         memberId,
@@ -95,6 +98,7 @@ export async function putSettings(db, memberId, settings) {
         JSON.stringify(settings.fixedExpenses || []),
         JSON.stringify(settings.monthlyGoals || {}),
         JSON.stringify(settings.monthlyAssetsData || {}),
+        JSON.stringify(settings.annualSavingsGoals || {}),
         new Date().toISOString()
     ).run();
 }
@@ -120,7 +124,8 @@ export async function importBook(db, memberId, backup) {
         monthlyBudgets: backup.monthlyBudgets,
         fixedExpenses: backup.fixedExpenses,
         monthlyGoals: backup.monthlyGoals,
-        monthlyAssetsData: backup.monthlyAssetsData
+        monthlyAssetsData: backup.monthlyAssetsData,
+        annualSavingsGoals: backup.annualSavingsGoals
     });
 
     return transactions.length;

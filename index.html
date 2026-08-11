@@ -475,6 +475,12 @@
                 <input type="month" id="saveAssetMonth" class="form-control form-control-sm text-center" style="max-width: 120px; font-size: 0.85rem;">
                 <button class="btn btn-sm btn-secondary fw-bold ms-2 owner-only" style="font-size: 0.85rem;" onclick="saveCurrentTotalAsset()">이 달의 자산으로 기록</button>
             </div>
+            <hr style="border-color: var(--line); opacity: 1; margin: 10px 0;">
+            <div class="d-flex align-items-center justify-content-between mb-1">
+                <span class="a-sub" id="annualGoalLabel" style="margin:0;">🎯 연간 저축 목표</span>
+                <button class="btn btn-sm btn-secondary owner-only" style="font-size: 0.78rem; padding: 2px 10px;" onclick="editAnnualSavingsGoal()">목표 수정</button>
+            </div>
+            <div id="annualGoalProgress"></div>
         </div>
         <div class="asset-block clickable" onclick="openAccountManager('stock')" title="클릭하여 계좌 관리">
             <div class="a-label">📈 주식/투자 자산 <small style="font-size:0.85em">(클릭 관리)</small></div>
@@ -890,6 +896,7 @@
     let fixedExpenses = JSON.parse(localStorage.getItem('couple_fixed_expenses')) || [];
     let monthlyGoals = JSON.parse(localStorage.getItem('couple_monthly_goals')) || {};
     let monthlyAssetsData = JSON.parse(localStorage.getItem('couple_monthly_assets')) || {};
+    let annualSavingsGoals = JSON.parse(localStorage.getItem('couple_annual_savings_goals')) || {};
     let currentDate = new Date(); // 현재 보고 있는 달
     let selectedDate = null; // 선택된 날짜 저장
     let editingId = null; // 현재 수정 중인 내역 ID
@@ -936,6 +943,7 @@
             fixedExpenses = book.settings.fixedExpenses;
             monthlyGoals = book.settings.monthlyGoals;
             monthlyAssetsData = book.settings.monthlyAssetsData;
+            annualSavingsGoals = book.settings.annualSavingsGoals || {};
             appTitle = book.settings.title;
             setupPartnerTabUI();
         } catch (err) {
@@ -1119,6 +1127,24 @@
             if (!isNaN(val)) {
                 monthlyBudgets[key] = val;
                 saveMonthlyBudgets();
+                renderAll();
+            } else {
+                alert("숫자를 입력해주세요.");
+            }
+        }
+    }
+
+    // 연간 저축 목표 설정 기능
+    function editAnnualSavingsGoal() {
+        const year = currentDate.getFullYear();
+        const currentGoal = annualSavingsGoals[year] || '';
+        const input = prompt(`${year}년 저축 목표를 입력하세요 (원):`, currentGoal);
+
+        if (input !== null) {
+            const val = parseInt(input);
+            if (!isNaN(val) && val >= 0) {
+                annualSavingsGoals[year] = val;
+                saveAnnualSavingsGoals();
                 renderAll();
             } else {
                 alert("숫자를 입력해주세요.");
@@ -1860,7 +1886,8 @@
             monthlyBudgets: monthlyBudgets,
             fixedExpenses: fixedExpenses,
             monthlyGoals: monthlyGoals,
-            monthlyAssetsData: monthlyAssetsData
+            monthlyAssetsData: monthlyAssetsData,
+            annualSavingsGoals: annualSavingsGoals
         };
     }
 
@@ -1898,6 +1925,11 @@
         saveSettingsToServer();
     }
 
+    function saveAnnualSavingsGoals() {
+        localStorage.setItem('couple_annual_savings_goals', JSON.stringify(annualSavingsGoals));
+        saveSettingsToServer();
+    }
+
     function saveTitle() {
         localStorage.setItem('budget_title', appTitle);
         saveSettingsToServer();
@@ -1921,6 +1953,7 @@
         'couple_fixed_expenses',
         'couple_monthly_goals',
         'couple_monthly_assets',
+        'couple_annual_savings_goals',
         'budget_last_price_update'
     ];
 
@@ -1966,6 +1999,7 @@
                 fixedExpenses = book.settings.fixedExpenses;
                 monthlyGoals = book.settings.monthlyGoals;
                 monthlyAssetsData = book.settings.monthlyAssetsData;
+                annualSavingsGoals = book.settings.annualSavingsGoals || {};
                 appTitle = book.settings.title;
             }
             currentBookTab = tab;
@@ -2025,6 +2059,16 @@
         updateGoalUI();
     }
 
+    // 특정 달의 upToDay일까지 누적 지출. categoryName을 주면 그 카테고리만 좁혀서 계산한다.
+    // (이번 달 요약 줄, 카테고리 상세의 전월 대비 비교에서 공통으로 쓴다)
+    function expenseUpToDay(monthKey, upToDay, categoryName) {
+        return transactions
+            .filter(t => t.type === 'expense' && t.category !== '투자손익' && t.date.startsWith(monthKey))
+            .filter(t => !categoryName || t.category === categoryName)
+            .filter(t => parseInt(t.date.slice(8, 10), 10) <= upToDay)
+            .reduce((sum, t) => sum + (parseInt(t.amount) || 0), 0);
+    }
+
     // 이번 달 지출을 지난달 같은 날짜까지의 지출과 비교해 한 줄로 알려준다.
     // 지난달 기록이 아예 없으면(막 시작한 경우) 비교 없이 누적액만 보여준다.
     function updateMonthlySummary() {
@@ -2040,12 +2084,7 @@
         const prevMonthDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
         const prevMonthKey = getMonthKey(prevMonthDate);
 
-        const expenseUpTo = (monthKey, upToDay) => transactions
-            .filter(t => t.type === 'expense' && t.category !== '투자손익' && t.date.startsWith(monthKey))
-            .filter(t => parseInt(t.date.slice(8, 10), 10) <= upToDay)
-            .reduce((sum, t) => sum + (parseInt(t.amount) || 0), 0);
-
-        const thisExpense = expenseUpTo(thisMonthKey, dayCutoff);
+        const thisExpense = expenseUpToDay(thisMonthKey, dayCutoff);
         const hasPrevRecord = transactions.some(t => t.date.startsWith(prevMonthKey));
 
         if (!hasPrevRecord) {
@@ -2055,7 +2094,7 @@
             return;
         }
 
-        const prevExpense = expenseUpTo(prevMonthKey, dayCutoff);
+        const prevExpense = expenseUpToDay(prevMonthKey, dayCutoff);
         const diff = thisExpense - prevExpense;
 
         // 지출이 늘었을 때만 빨간 잉크로 강조한다 ("적자"는 붉은 글씨라는 규칙 그대로).
@@ -2117,6 +2156,46 @@
         }
     }
 
+    // 연간 저축 목표 진행률. '저축'은 연초 자산 기록 대비 지금 총자산이 얼마나
+    // 늘었는지로 계산한다 (투자 손익도 포함해서 실제 순자산 증가를 보여준다).
+    function updateAnnualSavingsGoalUI(currentTotalAsset) {
+        const year = currentDate.getFullYear();
+        const goal = annualSavingsGoals[year] || 0;
+        const labelEl = document.getElementById('annualGoalLabel');
+        const container = document.getElementById('annualGoalProgress');
+        if (!labelEl || !container) return;
+
+        labelEl.innerText = `🎯 ${year}년 저축 목표`;
+
+        if (goal <= 0) {
+            container.innerHTML = `<div class="a-sub" style="margin:0;">목표를 정하면 연초 대비 자산이 얼마나 늘었는지 보여줘요.</div>`;
+            return;
+        }
+
+        const yearRecords = Object.keys(monthlyAssetsData).filter(key => key.startsWith(`${year}-`)).sort();
+        if (yearRecords.length === 0) {
+            container.innerHTML = `<div class="a-sub" style="margin:0;">${year}년 자산 기록이 아직 없어요. 위에서 먼저 기록해주세요.</div>`;
+            return;
+        }
+
+        const baseline = monthlyAssetsData[yearRecords[0]];
+        const progress = currentTotalAsset - baseline;
+        const percent = Math.round((progress / goal) * 100);
+        const barWidth = Math.max(0, Math.min(100, percent));
+        const barClass = progress >= 0 ? 'bg-info' : 'bg-danger';
+        const progressColor = progress >= 0 ? '#1B4332' : '#7A2E22';
+
+        container.innerHTML = `
+            <div class="progress" style="height: 14px; margin-bottom: 4px;">
+                <div class="progress-bar ${barClass}" style="width: ${barWidth}%;"></div>
+            </div>
+            <div class="a-sub d-flex justify-content-between" style="margin:0;">
+                <span>연초 대비 <b class="amount-num" style="color: ${progressColor};">${progress >= 0 ? '+' : ''}${progress.toLocaleString()}원</b></span>
+                <span>${percent}% · 목표 ${goal.toLocaleString()}원</span>
+            </div>
+        `;
+    }
+
     // 요약 정보 업데이트
     function updateSummary(currentData) {
         // 자산기반 방식: 총자산은 수입/지출 누적이 아니라 계좌 잔액 합계만 사용
@@ -2130,6 +2209,7 @@
 
         document.getElementById('totalAsset').innerText =
             (stockAsset + savingsAsset).toLocaleString() + "원";
+        updateAnnualSavingsGoalUI(stockAsset + savingsAsset);
         document.getElementById('stockAssetDisplay').innerText = stockAsset.toLocaleString() + "원";
         document.getElementById('stockAccountCount').innerText =
             `* 등록된 계좌: ${accounts.filter(a => a.type === 'stock').length}개`;
@@ -2368,11 +2448,40 @@
 
         document.getElementById('categoryDetailTitle').innerText = `📂 ${categoryName} 지출 내역`;
 
+        // 이 카테고리를 지난달 같은 날짜까지의 지출과 비교한다 (updateMonthlySummary와
+        // 같은 방식을 카테고리 단위로 좁힌 것)
+        const today = new Date();
+        const isViewingCurrentMonth = today.getFullYear() === currentDate.getFullYear() && today.getMonth() === currentDate.getMonth();
+        const lastDateOfView = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
+        const dayCutoff = isViewingCurrentMonth ? today.getDate() : lastDateOfView;
+        const thisMonthKey = getMonthKey(currentDate);
+        const prevMonthKey = getMonthKey(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+        const hasPrevRecord = transactions.some(t => t.date.startsWith(prevMonthKey));
+
+        let compareLine = '';
+        if (hasPrevRecord) {
+            const thisCatExpense = expenseUpToDay(thisMonthKey, dayCutoff, categoryName);
+            const prevCatExpense = expenseUpToDay(prevMonthKey, dayCutoff, categoryName);
+            const catDiff = thisCatExpense - prevCatExpense;
+            if (catDiff === 0) {
+                compareLine = `${dayCutoff}일까지 지난달과 같아요`;
+            } else if (catDiff < 0) {
+                compareLine = `${dayCutoff}일까지 지난달보다 ${Math.abs(catDiff).toLocaleString()}원 줄었어요`;
+            } else {
+                compareLine = `${dayCutoff}일까지 지난달보다 <b class="text-danger">${catDiff.toLocaleString()}원</b> 늘었어요`;
+            }
+        }
+
         let html = `
-            <div class="d-flex justify-content-between align-items-center mb-3 p-2 bg-light rounded">
+            <div class="d-flex justify-content-between align-items-center mb-1 p-2 bg-light rounded">
                 <span class="text-muted">총 ${items.length}건</span>
                 <strong class="text-danger fs-6">${total.toLocaleString()}원</strong>
             </div>`;
+        if (compareLine) {
+            html += `<div class="text-muted small mb-3" style="padding: 0 4px;">${compareLine}</div>`;
+        } else {
+            html += `<div class="mb-3"></div>`;
+        }
 
         if (items.length === 0) {
             html += '<p class="text-center text-muted py-3">이 달에 해당 카테고리 지출이 없습니다.</p>';
@@ -2566,6 +2675,7 @@
             appTitle: appTitle,
             monthlyGoals: monthlyGoals,
             monthlyAssetsData: monthlyAssetsData,
+            annualSavingsGoals: annualSavingsGoals,
             accounts: accounts,
             categories: categories,
             monthlyBudgets: monthlyBudgets,
@@ -2638,6 +2748,7 @@
                     localStorage.setItem('budget_title', data.appTitle || '커플 가계부');
                     localStorage.setItem('couple_monthly_goals', JSON.stringify(data.monthlyGoals || {}));
                     localStorage.setItem('couple_monthly_assets', JSON.stringify(data.monthlyAssetsData || {}));
+                    localStorage.setItem('couple_annual_savings_goals', JSON.stringify(data.annualSavingsGoals || {}));
                     localStorage.setItem('couple_accounts', JSON.stringify(data.accounts || []));
                     localStorage.setItem('couple_categories', JSON.stringify(data.categories || ['식비', '교통', '쇼핑', '주거/통신', '월급', '기타']));
                     localStorage.setItem('couple_monthly_budgets', JSON.stringify(data.monthlyBudgets || {}));

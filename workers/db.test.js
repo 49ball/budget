@@ -102,19 +102,21 @@ describe('settings', () => {
             monthlyBudgets: { '2026-07': 500000 },
             fixedExpenses: [{ day: 1, desc: '월세', amount: 700000 }],
             monthlyGoals: { '2026-07': '저축하기' },
-            monthlyAssetsData: { '2026-07': 1000000 }
+            monthlyAssetsData: { '2026-07': 1000000 },
+            annualSavingsGoals: { '2026': 10000000 }
         });
 
         const settings = await db.getSettings(env.DB, 'm-jt');
         expect(settings.title).toBe('정태의 가계부');
         expect(settings.accounts).toEqual([{ id: 1, name: '주식', type: 'stock', balance: 1000 }]);
         expect(settings.monthlyBudgets).toEqual({ '2026-07': 500000 });
+        expect(settings.annualSavingsGoals).toEqual({ '2026': 10000000 });
     });
 
     it('두 번 저장하면 덮어쓴다 (누적되지 않는다)', async () => {
         await seedCouple();
-        await db.putSettings(env.DB, 'm-jt', { title: 'A', accounts: [], categories: [], monthlyBudgets: {}, fixedExpenses: [], monthlyGoals: {}, monthlyAssetsData: {} });
-        await db.putSettings(env.DB, 'm-jt', { title: 'B', accounts: [], categories: [], monthlyBudgets: {}, fixedExpenses: [], monthlyGoals: {}, monthlyAssetsData: {} });
+        await db.putSettings(env.DB, 'm-jt', { title: 'A', accounts: [], categories: [], monthlyBudgets: {}, fixedExpenses: [], monthlyGoals: {}, monthlyAssetsData: {}, annualSavingsGoals: {} });
+        await db.putSettings(env.DB, 'm-jt', { title: 'B', accounts: [], categories: [], monthlyBudgets: {}, fixedExpenses: [], monthlyGoals: {}, monthlyAssetsData: {}, annualSavingsGoals: {} });
         const settings = await db.getSettings(env.DB, 'm-jt');
         expect(settings.title).toBe('B');
     });
@@ -137,7 +139,8 @@ describe('importBook', () => {
             monthlyBudgets: {},
             fixedExpenses: [],
             monthlyGoals: {},
-            monthlyAssetsData: {}
+            monthlyAssetsData: {},
+            annualSavingsGoals: {}
         });
 
         expect(count).toBe(1);
