@@ -185,6 +185,8 @@
             font-weight: 600;
             transition: background-color 0.15s, transform 0.1s;
         }
+        /* 눌렀을 때 살짝 눌리는 느낌 — 색만 있고 반응이 없던 버튼들도 저장 버튼과 동일하게 */
+        .btn:active { transform: scale(0.97); }
         .btn-primary {
             background: var(--stripe);
             border: none;
@@ -194,7 +196,6 @@
             background: #234f3d;
             color: var(--stripe-text);
         }
-        .btn-primary:active { transform: scale(0.98); }
         .btn-secondary {
             background: #fff;
             border: 1px solid var(--line-strong);
@@ -317,6 +318,17 @@
         }
         .expense-text { color: var(--expense); }
         .income-text  { color: var(--income); }
+
+        /* 주식 자산 수익률 정보: display:none으로 뚝 나타나지 않고 서랍처럼 펼쳐진다.
+           내용 높이를 픽셀로 추측하지 않도록 grid-template-rows 0fr→1fr 방식을 쓴다. */
+        #investReturnInfo {
+            display: grid;
+            grid-template-rows: 0fr;
+            opacity: 0;
+            transition: grid-template-rows 200ms ease-out, opacity 160ms ease-out;
+        }
+        #investReturnInfo.open { grid-template-rows: 1fr; opacity: 1; }
+        .invest-return-inner { overflow: hidden; min-height: 0; margin-top: 8px; border-top: 1px dotted var(--line); padding-top: 8px; }
 
         /* ── Table ── */
         .table {
@@ -469,18 +481,20 @@
             <div class="a-num" id="stockAssetDisplay">0원</div>
             <div class="a-sub" id="stockAccountCount">* 등록된 계좌: 0개</div>
             <div class="a-sub" id="priceUpdateStatus">시세 업데이트 전</div>
-            <div id="investReturnInfo" style="display:none; margin-top:8px; border-top:1px dotted var(--line); padding-top:8px;">
-                <div class="d-flex justify-content-between" style="font-size:0.82rem;">
-                    <span class="a-sub" style="margin:0;">원금</span>
-                    <span class="amount-num" id="investPrincipal">0원</span>
-                </div>
-                <div class="d-flex justify-content-between" style="font-size:0.82rem;">
-                    <span class="a-sub" style="margin:0;">평가손익</span>
-                    <span class="amount-num" id="investProfit">0원</span>
-                </div>
-                <div class="d-flex justify-content-between fw-bold" style="font-size:0.88rem; margin-top:2px;">
-                    <span>수익률</span>
-                    <span class="amount-num" id="investReturnRate">0%</span>
+            <div id="investReturnInfo">
+                <div class="invest-return-inner">
+                    <div class="d-flex justify-content-between" style="font-size:0.82rem;">
+                        <span class="a-sub" style="margin:0;">원금</span>
+                        <span class="amount-num" id="investPrincipal">0원</span>
+                    </div>
+                    <div class="d-flex justify-content-between" style="font-size:0.82rem;">
+                        <span class="a-sub" style="margin:0;">평가손익</span>
+                        <span class="amount-num" id="investProfit">0원</span>
+                    </div>
+                    <div class="d-flex justify-content-between fw-bold" style="font-size:0.88rem; margin-top:2px;">
+                        <span>수익률</span>
+                        <span class="amount-num" id="investReturnRate">0%</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1798,6 +1812,7 @@
         transactions.push(newTransaction);
         saveData();
         pushNewTransaction(newTransaction).catch(err => alert('서버 저장에 실패했습니다. 다시 시도해주세요.\n' + err.message));
+        highlightTransactionId = newTransaction.id;
         renderAll();
 
         if (editingId) {
@@ -1976,6 +1991,17 @@
         }
     }
 
+    // 삭제 버튼 클릭 시에만 사용: 실제 삭제 전에 그 줄을 먼저 페이드아웃시켜
+    // 뚝 끊기지 않고 사라지게 한다. (수정 시 내부적으로 호출되는 deleteItem은 그대로 즉시 처리)
+    function deleteItemWithAnimation(id, btnEl) {
+        const row = btnEl && btnEl.closest('tr');
+        if (!row) { deleteItem(id); return; }
+        row.style.transition = 'opacity 320ms ease-out, transform 320ms ease-out';
+        row.style.opacity = '0';
+        row.style.transform = 'translateY(-4px)';
+        row.addEventListener('transitionend', () => deleteItem(id), { once: true });
+    }
+
     // 3. 화면 렌더링 통합 함수
     function renderAll() {
         // 현재 월에 해당하는 데이터만 필터링
@@ -2043,18 +2069,22 @@
         }
     }
 
+    // 방금 저장된 거래의 id. renderList가 다시 그린 직후 해당 줄만
+    // 옅은 초록빛으로 표시했다가 가라앉혀서, 순간이동하듯 나타나지 않게 한다.
+    let highlightTransactionId = null;
+
     // 리스트 렌더링 (필터된 데이터 사용)
     function renderList(data) {
         const list = document.getElementById('transactionList');
         list.innerHTML = '';
         const sorted = [...data].sort((a, b) => new Date(b.date) - new Date(a.date));
-        
+
         sorted.forEach(t => {
             let badge = '';
             if (t.excludeFromBudget) badge = '<span class="badge bg-secondary ms-1">배분제외</span>';
-            
+
             const row = `
-                <tr>
+                <tr data-id="${t.id}">
                     <td>${t.date}</td>
                     <td><span class="badge ${t.type === 'income' ? 'bg-success' : 'bg-danger'}">${t.category}</span></td>
                     <td>${t.desc} ${badge}</td>
@@ -2063,12 +2093,28 @@
                     </td>
                     <td>
                         <button class="btn btn-sm btn-outline-primary border-0 me-1 owner-only" onclick="editTransaction(${t.id})" title="수정하기"><i class="bi bi-pencil"></i></button>
-                        <button class="btn btn-sm btn-outline-danger border-0 owner-only" onclick="deleteItem(${t.id})" title="삭제하기"><i class="bi bi-trash"></i></button>
+                        <button class="btn btn-sm btn-outline-danger border-0 owner-only" onclick="deleteItemWithAnimation(${t.id}, this)" title="삭제하기"><i class="bi bi-trash"></i></button>
                     </td>
                 </tr>
             `;
             list.innerHTML += row;
         });
+
+        if (highlightTransactionId !== null) {
+            const rowEl = list.querySelector(`tr[data-id="${highlightTransactionId}"]`);
+            highlightTransactionId = null;
+            if (rowEl) {
+                rowEl.style.opacity = '0';
+                rowEl.style.transform = 'translateY(-4px)';
+                rowEl.style.backgroundColor = 'rgba(27,67,50,0.14)';
+                requestAnimationFrame(() => requestAnimationFrame(() => {
+                    rowEl.style.transition = 'opacity 250ms ease-out, transform 250ms ease-out, background-color 600ms ease-out';
+                    rowEl.style.opacity = '1';
+                    rowEl.style.transform = 'none';
+                    rowEl.style.backgroundColor = 'transparent';
+                }));
+            }
+        }
     }
 
     // 요약 정보 업데이트
@@ -2103,7 +2149,7 @@
 
         const returnInfoEl = document.getElementById('investReturnInfo');
         if (totalPrincipal > 0) {
-            returnInfoEl.style.display = 'block';
+            returnInfoEl.classList.add('open');
             document.getElementById('investPrincipal').innerText = totalPrincipal.toLocaleString() + '원';
             const profitEl = document.getElementById('investProfit');
             profitEl.innerText = (totalProfit >= 0 ? '+' : '') + Math.round(totalProfit).toLocaleString() + '원';
@@ -2112,7 +2158,7 @@
             rateEl.innerText = (returnRate >= 0 ? '+' : '') + returnRate.toFixed(2) + '%';
             rateEl.style.color = returnRate >= 0 ? '#1B4332' : '#7A2E22';
         } else {
-            returnInfoEl.style.display = 'none';
+            returnInfoEl.classList.remove('open');
         }
 
         // 월별 요약
