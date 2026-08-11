@@ -150,6 +150,27 @@
         #coupleGoalDisplay { color: var(--ink) !important; }
         #monthlySummaryLine { color: var(--ink-sub) !important; }
         #monthlySummaryLine b { color: var(--expense); }
+        .report-teaser-box {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: fit-content;
+            max-width: 100%;
+            margin-left: auto;
+            margin-right: auto;
+            background: #FBF9F3;
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 6px 14px;
+            font-size: 0.8rem;
+            color: var(--ink-sub);
+            cursor: pointer;
+            transition: background-color 0.15s;
+        }
+        .report-teaser-box:hover { background: #f0ede2; }
+        .report-teaser-box i { font-size: 0.68rem; }
+        #monthlyReportTeaser b { font-family: var(--font-mono); font-variant-numeric: tabular-nums; color: var(--ink); }
 
         /* ── Form controls ── */
         .form-control, .form-select {
@@ -380,6 +401,52 @@
         .progress-bar.bg-warning { background: #B5652E !important; }
         .progress-bar.bg-danger  { background: var(--expense) !important; }
 
+        /* ── 월간 리포트: 은행 명세서처럼. 카드 없이 수입/지출을 큰 숫자로 찢어서
+           보여준 뒤, 나머지는 영수증 항목처럼 라벨 + 점선으로 나열한다. */
+        .report-headline {
+            display: flex;
+            align-items: stretch;
+            justify-content: center;
+            gap: 22px;
+            padding: 6px 0 22px;
+        }
+        .report-headline-col { flex: 1; text-align: center; }
+        .report-headline-label {
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            color: var(--ink-sub);
+            margin-bottom: 6px;
+        }
+        .report-headline-value {
+            font-family: var(--font-mono);
+            font-variant-numeric: tabular-nums;
+            font-size: 1.55rem;
+            font-weight: 700;
+        }
+        .report-headline-divider {
+            width: 0;
+            border-left: 1px dashed var(--line);
+        }
+        .report-line {
+            display: flex;
+            gap: 14px;
+            padding: 11px 2px;
+            border-top: 1px dotted var(--line);
+            font-size: 0.9rem;
+            line-height: 1.55;
+        }
+        .report-line-label {
+            flex: 0 0 58px;
+            padding-top: 1px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            color: var(--ink-sub);
+        }
+        .report-line-text { flex: 1; color: var(--ink); }
+        .report-line-text b { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
         /* ── Modals ── */
         .modal-content {
             background: var(--bg);
@@ -434,7 +501,6 @@
         <div>
             <button class="btn btn-outline-light btn-sm me-2" onclick="openGuideModal()">📖 사용법</button>
             <button class="btn btn-outline-light btn-sm me-2 owner-only" onclick="openFixedExpenseModal()">🔄 고정지출 관리</button>
-            <button class="btn btn-outline-warning btn-sm" onclick="openYearlyReport()">📅 연간 리포트</button>
             <button class="btn btn-outline-primary btn-sm" onclick="openAssetTrendReport()">📈 자산 변동</button>
             <button class="btn btn-outline-success btn-sm ms-2 owner-only" onclick="syncAllStockPrices()">📈 시세 업데이트</button>
             <button class="btn btn-outline-info btn-sm ms-2 owner-only" onclick="exportData()">💾 백업 저장</button>
@@ -460,8 +526,15 @@
     </div>
     <!-- 이번 달 지출을 지난달과 비교해 한 줄로 해석해준다. 숫자만 보여주지 않고
          "잘 하고 있나"에 바로 답하기 위함 -->
-    <div class="text-center mb-4" style="margin-top: -14px;">
+    <div class="text-center mb-2" style="margin-top: -14px;">
         <span id="monthlySummaryLine" style="font-size: 0.88rem; letter-spacing: -0.1px;"></span>
+    </div>
+    <!-- 지난달 리포트 한 줄 미리보기. 버튼을 찾아 눌러야 하는 대신, 몰아서
+         입력하고 열어보는 습관과 맞게 열 때마다 자연스럽게 보이게 한다.
+         클릭하면 월간 리포트 모달이 그대로 열리고, 그 안에서 ◀▶로 다른 달도 볼 수 있다. -->
+    <div id="monthlyReportTeaserBox" class="report-teaser-box mb-4" onclick="openMonthlyReport()">
+        <span id="monthlyReportTeaser"></span>
+        <i class="bi bi-chevron-right"></i>
     </div>
 
     <!-- 1. 자산 및 주식 현황: 통장처럼 한 줄에 괘선으로 구획을 나눈다 -->
@@ -814,16 +887,22 @@
     </div>
 </div>
 
-<!-- 연간 리포트 모달 -->
-<div class="modal fade" id="yearlyReportModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+<!-- 월간 리포트 모달 -->
+<div class="modal fade" id="monthlyReportModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">📅 연간 리포트</h5>
+                <h5 class="modal-title">📝 월간 리포트</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <canvas id="yearlyChart"></canvas>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <button class="btn btn-outline-secondary btn-sm" onclick="changeMonthlyReportMonth(-1)"><i class="bi bi-chevron-left"></i></button>
+                    <h6 class="mb-0" id="monthlyReportTitle">YYYY년 MM월</h6>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="changeMonthlyReportMonth(1)"><i class="bi bi-chevron-right"></i></button>
+                </div>
+                <div id="monthlyReportHeadline"></div>
+                <div id="monthlyReportContent"></div>
             </div>
         </div>
     </div>
@@ -2057,6 +2136,33 @@
         updateSummary(currentMonthTransactions);
         updateMonthlySummary();
         updateGoalUI();
+        renderMonthlyReportTeaser();
+    }
+
+    // 지난달 리포트 한 줄 미리보기. 항상 "실제 지난달"(currentDate로 보고 있는
+    // 달과 무관) 기준이라 달력을 넘겨도 바뀌지 않는다. 기록이 없으면 조용히 숨긴다.
+    function renderMonthlyReportTeaser() {
+        const teaserEl = document.getElementById('monthlyReportTeaser');
+        const boxEl = document.getElementById('monthlyReportTeaserBox');
+        if (!teaserEl || !boxEl) return;
+
+        const lastMonthDate = new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1);
+        const key = getMonthKey(lastMonthDate);
+        const monthTx = transactions.filter(t => t.date.startsWith(key));
+
+        if (monthTx.length === 0) {
+            boxEl.style.display = 'none';
+            return;
+        }
+        boxEl.style.display = 'flex';
+
+        const income = monthTx.filter(t => t.type === 'income' && t.category !== '투자손익').reduce((s, t) => s + (parseInt(t.amount) || 0), 0);
+        const expense = monthTx.filter(t => t.type === 'expense' && t.category !== '투자손익').reduce((s, t) => s + (parseInt(t.amount) || 0), 0);
+        // 저축률 계산에서는 투자금액을 지출로 치지 않는다 (renderMonthlyReport와 동일한 정의)
+        const expenseForSavings = monthTx.filter(t => t.type === 'expense' && t.category !== '투자손익' && t.category !== '투자금액').reduce((s, t) => s + (parseInt(t.amount) || 0), 0);
+        const savingsRateText = income > 0 ? ` · 저축률 <b>${(((income - expenseForSavings) / income) * 100).toFixed(1)}%</b>` : '';
+
+        teaserEl.innerHTML = `📝 ${lastMonthDate.getMonth() + 1}월 리포트: <b>${formatManwon(income)}</b> 벌고 <b>${formatManwon(expense)}</b> 썼어요${savingsRateText}`;
     }
 
     // 특정 달의 upToDay일까지 누적 지출. categoryName을 주면 그 카테고리만 좁혀서 계산한다.
@@ -2285,7 +2391,6 @@
     // 4. 차트 (Chart.js)
     let barChartInstance = null;
     let pieChartInstance = null;
-    let yearlyChartInstance = null;
     let assetTrendChartInstance = null;
     let categoryDetailModal = null;
     let pieChartCategoryData = {}; // 클릭 시 참조용
@@ -2507,51 +2612,178 @@
         categoryDetailModal.show();
     }
 
-    // 연간 리포트 기능
-    const yearlyReportModal = new bootstrap.Modal(document.getElementById('yearlyReportModal'));
+    // 월간 리포트 기능. 지난달을 몰아서 입력하는 습관과 맞게 "매달 1일 자동 팝업"이
+    // 아니라 버튼을 눌렀을 때만 보여준다. 기본으로는 가장 최근에 끝난 달(지난달)을 연다.
+    const monthlyReportModal = new bootstrap.Modal(document.getElementById('monthlyReportModal'));
+    let monthlyReportDate = new Date();
 
-    function openYearlyReport() {
-        yearlyReportModal.show();
-        setTimeout(renderYearlyChart, 300); // 모달이 뜬 후 렌더링
+    function openMonthlyReport() {
+        monthlyReportDate = new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1);
+        renderMonthlyReport();
+        monthlyReportModal.show();
     }
 
-    function renderYearlyChart() {
-        const ctx = document.getElementById('yearlyChart').getContext('2d');
-        const year = currentDate.getFullYear();
-        
-        // 월별 데이터 집계 (0~11월)
-        const monthlyIncome = new Array(12).fill(0);
-        const monthlyExpense = new Array(12).fill(0);
+    function changeMonthlyReportMonth(offset) {
+        monthlyReportDate.setMonth(monthlyReportDate.getMonth() + offset);
+        renderMonthlyReport();
+    }
 
-        transactions.forEach(t => {
-            const tDate = new Date(t.date);
-            if (tDate.getFullYear() === year) {
-                const m = tDate.getMonth();
-                if (t.type === 'income') monthlyIncome[m] += t.amount;
-                else monthlyExpense[m] += t.amount;
+    // 원 단위 그대로 대신 "만 원" 단위로 반올림해서 보여준다. 서술형 리포트라
+    // 앱 다른 곳(정확한 원 단위 장부)과 달리 숫자를 문장으로 편하게 읽게 하려는 것.
+    function formatManwon(amount) {
+        return `${Math.round(amount / 10000).toLocaleString()}만 원`;
+    }
+
+    // 카테고리 이름은 사용자가 자유롭게 짓기 때문에("고정", "쇼핑"처럼 받침이 있을 수도,
+    // "식비"처럼 없을 수도) 조사를 하드코딩하면 "고정는", "쇼핑가"처럼 틀린다.
+    // 마지막 글자의 종성 유무로 은/는, 이/가를 고른다.
+    function hasBatchim(word) {
+        if (!word) return false;
+        const code = word.charCodeAt(word.length - 1) - 0xAC00;
+        if (code < 0 || code > 11171) return false; // 완성형 한글이 아니면 받침 없다고 취급
+        return code % 28 !== 0;
+    }
+    function josa은는(word) { return hasBatchim(word) ? '은' : '는'; }
+    function josa이가(word) { return hasBatchim(word) ? '이' : '가'; }
+
+    function renderMonthlyReport() {
+        const key = getMonthKey(monthlyReportDate);
+        document.getElementById('monthlyReportTitle').innerText = `${monthlyReportDate.getFullYear()}년 ${monthlyReportDate.getMonth() + 1}월`;
+
+        const prevDate = new Date(monthlyReportDate.getFullYear(), monthlyReportDate.getMonth() - 1, 1);
+        const prevKey = getMonthKey(prevDate);
+
+        const monthTx = transactions.filter(t => t.date.startsWith(key));
+        const headlineEl = document.getElementById('monthlyReportHeadline');
+        const contentEl = document.getElementById('monthlyReportContent');
+
+        if (monthTx.length === 0) {
+            headlineEl.innerHTML = '';
+            contentEl.innerHTML = '<p class="text-muted text-center py-3">이 달엔 기록된 내역이 없어요.</p>';
+            return;
+        }
+
+        const income = monthTx.filter(t => t.type === 'income' && t.category !== '투자손익').reduce((s, t) => s + (parseInt(t.amount) || 0), 0);
+        const expense = monthTx.filter(t => t.type === 'expense' && t.category !== '투자손익').reduce((s, t) => s + (parseInt(t.amount) || 0), 0);
+
+        headlineEl.innerHTML = `
+            <div class="report-headline">
+                <div class="report-headline-col">
+                    <div class="report-headline-label">수입</div>
+                    <div class="report-headline-value income-text">${formatManwon(income)}</div>
+                </div>
+                <div class="report-headline-divider"></div>
+                <div class="report-headline-col">
+                    <div class="report-headline-label">지출</div>
+                    <div class="report-headline-value expense-text">${formatManwon(expense)}</div>
+                </div>
+            </div>
+        `;
+
+        // 각 줄은 { label, text } 형태로 모아뒀다가 마지막에 영수증 항목처럼 그린다.
+        const lines = [];
+
+        // 저축률 (현금흐름 기준: 수입 - 지출). 순자산 증가분과는 별개 지표로 아래에서 따로 보여준다.
+        // 투자금액은 소비가 아니라 자산을 옮긴 것뿐이라 지출로 치지 않는다
+        // (다른 줄에서 쓰는 '지출' 총액과는 다른, 저축률 전용 정의).
+        if (income > 0) {
+            const expenseForSavings = monthTx.filter(t => t.type === 'expense' && t.category !== '투자손익' && t.category !== '투자금액').reduce((s, t) => s + (parseInt(t.amount) || 0), 0);
+            const savingsRate = ((income - expenseForSavings) / income) * 100;
+            const prevTx = transactions.filter(t => t.date.startsWith(prevKey));
+            const prevIncome = prevTx.filter(t => t.type === 'income' && t.category !== '투자손익').reduce((s, t) => s + (parseInt(t.amount) || 0), 0);
+            const prevExpenseForSavings = prevTx.filter(t => t.type === 'expense' && t.category !== '투자손익' && t.category !== '투자금액').reduce((s, t) => s + (parseInt(t.amount) || 0), 0);
+
+            if (prevIncome > 0) {
+                const prevSavingsRate = ((prevIncome - prevExpenseForSavings) / prevIncome) * 100;
+                const rateDiff = savingsRate - prevSavingsRate;
+                const rateDiffText = Math.abs(rateDiff) < 0.05
+                    ? '지난달과 비슷해요'
+                    : `지난달보다 ${Math.abs(rateDiff).toFixed(1)}%p ${rateDiff > 0 ? '올랐어요' : '내렸어요'}`;
+                lines.push({ label: '저축률', text: `저축률은 <b>${savingsRate.toFixed(1)}%</b>로 ${rateDiffText}.` });
+            } else {
+                lines.push({ label: '저축률', text: `저축률은 <b>${savingsRate.toFixed(1)}%</b>예요.` });
             }
-        });
+        }
 
-        if (yearlyChartInstance) yearlyChartInstance.destroy();
-        yearlyChartInstance = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'],
-                datasets: [
-                    {
-                        label: '수입',
-                        data: monthlyIncome,
-                        backgroundColor: '#1B4332'
-                    },
-                    {
-                        label: '지출',
-                        data: monthlyExpense,
-                        backgroundColor: '#7A2E22'
-                    }
-                ]
-            },
-            options: { responsive: true, plugins: { title: { display: true, text: `${year}년 월별 리포트` } } }
-        });
+        // 카테고리별 최근 3개월 평균과 비교해 가장 크게 벌어진 카테고리 하나만 짚어준다.
+        // 3개월치 기록이 다 있어야 평균이 왜곡되지 않으므로, 이전 3달 중 하나라도
+        // 기록이 아예 없으면 (막 시작한 경우) 이 줄은 생략한다.
+        const priorMonthKeys = [1, 2, 3].map(i => getMonthKey(new Date(monthlyReportDate.getFullYear(), monthlyReportDate.getMonth() - i, 1)));
+        const hasFull3MonthHistory = priorMonthKeys.every(k => transactions.some(t => t.date.startsWith(k)));
+
+        // 투자금액은 소비가 아니라 자산 이동이라 카테고리 분석(1위 지출, 3개월 평균 비교)에서도 뺀다.
+        const thisMonthByCategory = {};
+        monthTx.filter(t => t.type === 'expense' && t.category !== '투자손익' && t.category !== '투자금액')
+            .forEach(t => { thisMonthByCategory[t.category] = (thisMonthByCategory[t.category] || 0) + (parseInt(t.amount) || 0); });
+
+        if (hasFull3MonthHistory) {
+            const categories3moTotal = {};
+            priorMonthKeys.forEach(k => {
+                transactions.filter(t => t.type === 'expense' && t.category !== '투자손익' && t.category !== '투자금액' && t.date.startsWith(k))
+                    .forEach(t => { categories3moTotal[t.category] = (categories3moTotal[t.category] || 0) + (parseInt(t.amount) || 0); });
+            });
+
+            let biggestDiffCat = null, biggestDiff = 0;
+            Object.keys(thisMonthByCategory).forEach(cat => {
+                const avg = (categories3moTotal[cat] || 0) / 3;
+                const diff = thisMonthByCategory[cat] - avg;
+                if (Math.abs(diff) > Math.abs(biggestDiff)) { biggestDiff = diff; biggestDiffCat = cat; }
+            });
+
+            if (biggestDiffCat && Math.round(Math.abs(biggestDiff)) >= 10000) {
+                const diffText = biggestDiff > 0 ? '많아요' : '적어요';
+                lines.push({ label: '카테고리', text: `${biggestDiffCat}${josa은는(biggestDiffCat)} ${formatManwon(thisMonthByCategory[biggestDiffCat])}으로 최근 3개월 평균보다 <b>${formatManwon(Math.abs(biggestDiff))}</b> ${diffText}.` });
+            }
+        }
+
+        // 이번 달 지출 1위 카테고리, 지난달과 다르면 지난달 1위도 같이 짚어준다.
+        const topCatThis = Object.keys(thisMonthByCategory).sort((a, b) => thisMonthByCategory[b] - thisMonthByCategory[a])[0];
+        if (topCatThis) {
+            const prevByCategory = {};
+            transactions.filter(t => t.type === 'expense' && t.category !== '투자손익' && t.category !== '투자금액' && t.date.startsWith(prevKey))
+                .forEach(t => { prevByCategory[t.category] = (prevByCategory[t.category] || 0) + (parseInt(t.amount) || 0); });
+            const topCatPrev = Object.keys(prevByCategory).sort((a, b) => prevByCategory[b] - prevByCategory[a])[0];
+
+            let topLine = `이번 달은 <b>${topCatThis}</b>${josa이가(topCatThis)} 가장 많이 나갔어요 (${formatManwon(thisMonthByCategory[topCatThis])}).`;
+            if (topCatPrev && topCatPrev !== topCatThis) {
+                topLine += ` 지난달엔 ${topCatPrev}${josa이가(topCatPrev)} 1위였어요.`;
+            }
+            lines.push({ label: '1위 지출', text: topLine });
+        }
+
+        // 순자산 증가분 + 그중 투자수익 분리 ('투자손익' 카테고리 거래 합)
+        if (monthlyAssetsData[key] !== undefined && monthlyAssetsData[prevKey] !== undefined) {
+            const assetDiff = monthlyAssetsData[key] - monthlyAssetsData[prevKey];
+            const investProfit = monthTx.filter(t => t.category === '투자손익')
+                .reduce((s, t) => s + (t.type === 'income' ? (parseInt(t.amount) || 0) : -(parseInt(t.amount) || 0)), 0);
+
+            if (assetDiff >= 0) {
+                let assetLine = `총자산은 <b class="income-text">${formatManwon(assetDiff)}</b> 늘었어요`;
+                assetLine += investProfit !== 0 ? `. 그중 ${formatManwon(investProfit)}은 투자수익이에요.` : '.';
+                lines.push({ label: '순자산', text: assetLine });
+            } else {
+                lines.push({ label: '순자산', text: `총자산은 <b class="expense-text">${formatManwon(Math.abs(assetDiff))}</b> 줄었어요.` });
+            }
+        }
+
+        // 고정비 비율 ('고정' 카테고리 = 고정지출 일괄등록 시 자동으로 붙는 카테고리)
+        const fixedExpenseTotal = thisMonthByCategory['고정'] || 0;
+        if (fixedExpenseTotal > 0) {
+            const fixedRatio = Math.round((fixedExpenseTotal / expense) * 100);
+            lines.push({ label: '고정비', text: `고정비 비율은 지출의 <b>${fixedRatio}%</b>예요.` });
+        }
+
+        // 무지출일 수
+        const daysInReportMonth = new Date(monthlyReportDate.getFullYear(), monthlyReportDate.getMonth() + 1, 0).getDate();
+        const spendingDays = new Set(monthTx.filter(t => t.type === 'expense' && t.category !== '투자손익').map(t => t.date));
+        lines.push({ label: '무지출', text: `이 달의 무지출일은 <b>${daysInReportMonth - spendingDays.size}일</b>이었어요.` });
+
+        contentEl.innerHTML = lines.map(l => `
+            <div class="report-line">
+                <div class="report-line-label">${l.label}</div>
+                <div class="report-line-text">${l.text}</div>
+            </div>
+        `).join('');
     }
 
     // 자산 변동 리포트 기능
