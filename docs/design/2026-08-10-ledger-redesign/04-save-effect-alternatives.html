@@ -1,0 +1,218 @@
+<title>저장 효과 3가지 비교</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #15161a; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif; }
+  .kr { font-family: -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; }
+
+  .intro { max-width: 760px; margin: 0 auto; padding: 44px 24px 8px; color: #cfd2da; }
+  .intro h1 { color: #f2f3f6; font-size: 1.4rem; margin: 0 0 12px; text-wrap: balance; }
+  .intro p { line-height: 1.7; font-size: 0.94rem; margin: 0 0 8px; color: #b7bac2; }
+  .intro .key { color: #f2f3f6; font-weight: 600; }
+
+  .row { display: flex; flex-wrap: wrap; gap: 28px; justify-content: center; padding: 28px 24px 72px; }
+  .col { flex: 1 1 320px; max-width: 380px; }
+  .col-label { max-width: 380px; margin: 0 auto 12px; color: #cfd2da; font-size: 0.86rem; font-weight: 700; }
+  .col-label .n { color: #7d8390; font-weight: 400; }
+
+  .passbook {
+    background: #F2EFE6; color: #1C1C1C;
+    font-family: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
+    box-shadow: -6px 0 14px -6px rgba(0,0,0,0.35) inset, 0 18px 40px rgba(0,0,0,0.35);
+    border-left: 4px solid #d8d3c2;
+  }
+  .stripe { background: #1B4332; color: #F2EFE6; padding: 12px 18px; font-size: 0.84rem; font-weight: 700; letter-spacing: 0.03em; }
+  .body { padding: 16px 18px 20px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.78rem; margin-bottom: 4px; }
+  th { text-align: right; font-size: 0.66rem; color: #5c5c58; font-weight: 600; border-bottom: 1px solid #1C1C1C; padding: 4px 6px; }
+  th:first-child, td:first-child { text-align: left; }
+  td { padding: 7px 6px; border-bottom: 1px dotted #c9c5b4; text-align: right; font-variant-numeric: tabular-nums; }
+  td.desc { text-align: left; color: #3a3a36; }
+  td.out { color: #7A2E22; }
+  td.bal { font-weight: 700; }
+
+  .save-btn {
+    font-family: -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    font-weight: 700; font-size: 0.84rem; margin-top: 14px;
+    background: #1B4332; color: #F2EFE6; border: none; padding: 9px 16px; cursor: pointer;
+  }
+  .save-btn:hover { background: #204a3b; }
+  .save-btn:focus-visible { outline: 2px solid #7A2E22; outline-offset: 3px; }
+  .save-btn:disabled { opacity: 0.6; cursor: default; }
+
+  /* ── 효과 1: 잔액 숫자 롤업 (오도미터) ── */
+  .roll-wrap { display: inline-block; overflow: hidden; height: 1.05em; vertical-align: bottom; }
+  .roll-digits { display: inline-block; }
+  .roll-digits span { display: block; height: 1.05em; line-height: 1.05em; }
+
+  /* ── 효과 2: 통장 전체 임팩트 흔들림 ── */
+  .passbook.jiggle { animation: jiggle 420ms ease; }
+  @keyframes jiggle {
+    0%   { transform: rotate(0deg) translateY(0); }
+    20%  { transform: rotate(-0.6deg) translateY(1px); }
+    40%  { transform: rotate(0.5deg) translateY(-1px); }
+    60%  { transform: rotate(-0.3deg) translateY(1px); }
+    80%  { transform: rotate(0.15deg) translateY(0); }
+    100% { transform: rotate(0deg) translateY(0); }
+  }
+  .thud-ring {
+    position: absolute; left: 50%; bottom: -4px; width: 60%; height: 6px;
+    transform: translateX(-50%) scaleX(0.4); border-radius: 50%;
+    background: rgba(0,0,0,0.25); opacity: 0; filter: blur(2px);
+  }
+  .thud-ring.play { animation: thud 420ms ease; }
+  @keyframes thud {
+    0%   { opacity: 0; transform: translateX(-50%) scaleX(0.4); }
+    25%  { opacity: 0.5; transform: translateX(-50%) scaleX(1.05); }
+    100% { opacity: 0; transform: translateX(-50%) scaleX(0.4); }
+  }
+  .col-2 .passbook { position: relative; }
+
+  /* ── 효과 3: 초록 잉크 확인 도장 (통장 색으로) ── */
+  .stamp-wrap { position: relative; display: inline-block; }
+  .ink-stamp {
+    position: absolute; top: 50%; left: calc(100% + 10px); transform: translateY(-50%) scale(1.8) rotate(-10deg);
+    opacity: 0; pointer-events: none; white-space: nowrap;
+    font-family: -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    font-weight: 800; font-size: 0.78rem; letter-spacing: 0.02em;
+    color: #1B4332; border: 2px solid #1B4332; border-radius: 4px; padding: 4px 10px;
+  }
+  .ink-stamp.show { animation: stampIn 650ms cubic-bezier(.2,1.6,.4,1) forwards; }
+  @keyframes stampIn {
+    0%   { transform: translateY(-50%) scale(1.8) rotate(-14deg); opacity: 0; }
+    40%  { transform: translateY(-50%) scale(0.94) rotate(-4deg); opacity: 1; }
+    100% { transform: translateY(-50%) scale(1) rotate(-6deg); opacity: 1; }
+  }
+
+  tr.new-row { animation: rowIn 480ms ease both; }
+  @keyframes rowIn { from { background: #E3D9A8; } to { background: transparent; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .passbook.jiggle, .thud-ring.play, .ink-stamp.show, tr.new-row, .roll-digits { animation-duration: 1ms !important; transition-duration: 1ms !important; }
+  }
+</style>
+
+<div class="intro">
+  <h1 class="kr">저장 효과 대안 3가지</h1>
+  <p class="kr">동전이 슬롯 속으로 사라지는 느낌이 별로였다는 거, <span class="key">"쌓인다"보다 "없어진다"에 가까워 보였기 때문</span>일 수 있어. 그래서 이번엔 동전 오브젝트 자체를 빼고, 다른 방식으로 "저장됐다"는 느낌을 줘봤어. 각 카드의 저장하기를 눌러봐.</p>
+</div>
+
+<div class="row">
+  <div class="col col-1">
+    <div class="col-label kr">1. 잔액 숫자 롤업 <span class="n">— 숫자가 계산기처럼 굴러가며 바뀜</span></div>
+    <div class="passbook">
+      <div class="stripe">정태은행 · 우리집 통장</div>
+      <div class="body">
+        <table>
+          <thead><tr><th style="text-align:left;">내용</th><th>출금</th><th>잔액</th></tr></thead>
+          <tbody id="body1">
+            <tr><td class="desc kr">안과 검진비용</td><td class="out">100,000</td><td class="bal" id="lastBal1">103,450,703</td></tr>
+          </tbody>
+        </table>
+        <button class="save-btn" id="btn1">저장하기</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="col col-2">
+    <div class="col-label kr">2. 통장 임팩트 <span class="n">— 저장 순간 통장 전체가 살짝 흔들림</span></div>
+    <div class="passbook" id="passbook2">
+      <div class="stripe">정태은행 · 우리집 통장</div>
+      <div class="body">
+        <table>
+          <thead><tr><th style="text-align:left;">내용</th><th>출금</th><th>잔액</th></tr></thead>
+          <tbody id="body2">
+            <tr><td class="desc kr">안과 검진비용</td><td class="out">100,000</td><td class="bal">103,450,703</td></tr>
+          </tbody>
+        </table>
+        <button class="save-btn" id="btn2">저장하기</button>
+      </div>
+      <div class="thud-ring" id="thud"></div>
+    </div>
+  </div>
+
+  <div class="col col-3">
+    <div class="col-label kr">3. 초록 잉크 도장 <span class="n">— 통장 색으로 다시 만든 확인 도장</span></div>
+    <div class="passbook">
+      <div class="stripe">정태은행 · 우리집 통장</div>
+      <div class="body">
+        <table>
+          <thead><tr><th style="text-align:left;">내용</th><th>출금</th><th>잔액</th></tr></thead>
+          <tbody id="body3">
+            <tr><td class="desc kr">안과 검진비용</td><td class="out">100,000</td><td class="bal">103,450,703</td></tr>
+          </tbody>
+        </table>
+        <span class="stamp-wrap">
+          <button class="save-btn" id="btn3">저장하기</button>
+          <span class="ink-stamp" id="stamp3">✓ 기록완료</span>
+        </span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function addRow(tbodyId, newBal) {
+    const body = document.getElementById(tbodyId);
+    const row = document.createElement('tr');
+    row.className = 'new-row';
+    row.innerHTML = `<td class="desc kr">커피값</td><td class="out">4,500</td><td class="bal">${newBal.toLocaleString()}</td>`;
+    body.appendChild(row);
+  }
+
+  // 효과 1: 잔액 롤업
+  const btn1 = document.getElementById('btn1');
+  let done1 = false;
+  btn1.addEventListener('click', () => {
+    if (done1) return;
+    done1 = true;
+    const from = 103450703, to = 103446203;
+    addRow('body1', to);
+    const cells = document.querySelectorAll('#body1 .bal');
+    const target = cells[cells.length - 1];
+    const startTime = performance.now();
+    const dur = 550;
+    function step(now) {
+      const t = Math.min(1, (now - startTime) / dur);
+      const eased = 1 - Math.pow(1 - t, 3);
+      const val = Math.round(from + (to - from) * eased);
+      target.textContent = val.toLocaleString();
+      if (t < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+    btn1.textContent = '저장됨';
+    btn1.disabled = true;
+  });
+
+  // 효과 2: 임팩트 흔들림
+  const btn2 = document.getElementById('btn2');
+  const passbook2 = document.getElementById('passbook2');
+  const thud = document.getElementById('thud');
+  let done2 = false;
+  btn2.addEventListener('click', () => {
+    if (done2) return;
+    done2 = true;
+    passbook2.classList.remove('jiggle'); thud.classList.remove('play');
+    void passbook2.offsetWidth;
+    passbook2.classList.add('jiggle'); thud.classList.add('play');
+    addRow('body2', 103446203);
+    btn2.textContent = '저장됨';
+    btn2.disabled = true;
+  });
+
+  // 효과 3: 초록 잉크 도장
+  const btn3 = document.getElementById('btn3');
+  const stamp3 = document.getElementById('stamp3');
+  let done3 = false;
+  btn3.addEventListener('click', () => {
+    if (done3) return;
+    done3 = true;
+    stamp3.classList.remove('show');
+    void stamp3.offsetWidth;
+    stamp3.classList.add('show');
+    addRow('body3', 103446203);
+    btn3.textContent = '저장됨';
+    btn3.disabled = true;
+  });
+</script>
